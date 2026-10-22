@@ -10,6 +10,7 @@ import AdminPedidos from "./pages/admin/Pedidos";
 import Dashboard from "./pages/admin/Dashboard";
 import Clientes from "./pages/admin/Clientes";
 import Produtos from "./pages/admin/Produtos";
+import Ceasa from "./pages/admin/Ceasa";
 
 export default function App() {
   const { perfil, sair } = useAuth();
@@ -41,6 +42,8 @@ export default function App() {
             <Route path="/admin/dashboard" element={<Dashboard />} />
             <Route path="/admin/clientes" element={<Clientes />} />
             <Route path="/admin/produtos" element={<Produtos />} />
+            <Route path="/admin/ceasa" element={<Ceasa />} />
+            <Route path="/admin/visao-cliente" element={<NovoPedido previa />} />
             <Route path="*" element={<Navigate to="/admin/pedidos" replace />} />
           </> : <>
             <Route path="/pedido" element={<NovoPedido />} />

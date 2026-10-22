@@ -3,7 +3,10 @@
 Clientes cadastrados entram com usuário e senha, montam o pedido e enviam. A loja recebe na hora no painel, confere, lança os preços do dia e avança a situação até a entrega.
 
 - **Cliente:** catálogo por categoria (kg, unidade, maço, dúzia, bandeja), item fora da lista, endereço do cadastro já preenchido, dia e turno de entrega, acompanhamento do pedido, repetir pedido anterior, cancelar enquanto não foi aprovado.
-- **Admin (pai e dindo):** pedidos chegando em tempo real, edição de itens (peso separado, preço, em falta), taxa e desconto, recado ao cliente. Fluxo **Recebido → Aprovado → Preparando → Em entrega → Entregue** (ou Cancelado), com histórico. O último preço de cada produto vira sugestão no próximo pedido.
+- **Admin (pai e dindo):** pedidos chegando em tempo real, edição de itens (peso separado, preço, em falta), taxa e desconto, recado ao cliente. Fluxo **Novo → Em preparo → Em entrega → Entregue** (ou Cancelado), com histórico.
+- **Preços:** cadastrados na tela Produtos; aparecem no catálogo e já entram no pedido (total estimado; o peso separado ajusta o valor final).
+- **Lista da Ceasa:** soma os itens de todos os pedidos por data de entrega, agrupados por categoria, com marcação do que já foi comprado, cópia para WhatsApp e impressão.
+- **Visão do cliente:** prévia do catálogo como o cliente vê, sem enviar pedido.
 - **Análises:** faturamento por dia, ticket médio, produtos e clientes que mais compram, pedidos por dia da semana e itens que mais faltaram.
 - **Cadastro:** clientes e produtos. Só quem o admin cadastra tem acesso; dá para bloquear e trocar senha.
 
@@ -15,7 +18,7 @@ Stack: React + Vite no front, Supabase (Postgres, login e permissões por linha)
 
 ### 1. Supabase
 1. Crie uma conta em supabase.com e um projeto novo. Região **South America (São Paulo)**.
-2. **SQL Editor** → cole e rode `supabase/migrations/0001_init.sql`, depois `0002_produtos_iniciais.sql`.
+2. **SQL Editor** → cole e rode, nesta ordem: `supabase/migrations/0001_init.sql`, `0002_produtos_iniciais.sql` e `0003_precos_fluxo_ceasa.sql`.
 3. **Authentication → Sign In / Providers**:
    - desligue **Allow new users to sign up** (ninguém se cadastra sozinho);
    - em **Email**, desligue **Confirm email**.

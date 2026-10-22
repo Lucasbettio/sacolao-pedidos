@@ -198,3 +198,13 @@ table.edit tr.semp .pr input{background:var(--tomato-soft)}
 .cred{background:var(--green-soft);border-radius:12px;padding:12px 14px;font-size:14px}
 .cred code{font-size:15px;font-weight:700;user-select:all}
 @media (prefers-reduced-motion:no-preference){.pcard,.prod{transition:background .15s,border-color .15s}}
+
+/* Impressão (lista da Ceasa) */
+.print-only{display:none}
+@media print{
+  .top,.no-print,.toast{display:none!important}
+  .print-only{display:block}
+  body{background:#fff;color:#000}
+  .card{border:1px solid #bbb;box-shadow:none;break-inside:avoid}
+  main{padding:0}
+}

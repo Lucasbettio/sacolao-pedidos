@@ -40,7 +40,7 @@ export default function MeusPedidos() {
             {lista.map(p => (
               <Link key={p.id} to={`/meus-pedidos/${p.id}`} className={`pcard ${sel?.id === p.id ? "sel" : ""}`}>
                 <span className="t tnum">Pedido nº {p.numero}</span><StatusPill s={p.status} />
-                <span className="meta tnum">Entrega {dataCurta(p.entrega_data)} · {p.entrega_turno} · {p.itens} itens{p.status !== "recebido" && p.status !== "cancelado" ? ` · ${brl(p.total)}` : ""}</span>
+                <span className="meta tnum">Entrega {dataCurta(p.entrega_data)} · {p.entrega_turno} · {p.itens} itens{p.status !== "cancelado" ? ` · ${brl(p.total)}` : ""}</span>
               </Link>))}
           </div>
           <div>{sel ? <Detalhe p={sel} onRepetir={(itens) => { if (cliente) { salvarCarrinho(cliente.id, itens); nav("/pedido"); toast("Itens colocados na lista. Confira e envie."); } }} />
@@ -61,7 +61,8 @@ function Detalhe({ p, onRepetir }: { p: PedidoResumo; onRepetir: (i: Record<stri
     supabase.from("pedido_eventos").select("*").eq("pedido_id", p.id).order("created_at").then(({ data }) => setEventos((data as Evento[]) ?? []));
   }, [p.id, p.updated_at]);
 
-  const comPreco = p.status !== "recebido" && p.status !== "cancelado";
+  const comPreco = p.status !== "cancelado";
+  const estimado = p.status === "recebido" || p.status === "preparando";
   async function cancelar() {
     const { error } = await supabase.rpc("cancelar_pedido", { p_id: p.id });
     if (error) toast(msgErro(error)); else toast("Pedido cancelado");
@@ -91,7 +92,7 @@ function Detalhe({ p, onRepetir }: { p: PedidoResumo; onRepetir: (i: Record<stri
             <td>{i.nome}{i.em_falta && <span className="hint"> · em falta</span>}</td>
             <td className="r tnum">{qtd(i.quantidade)} {i.unidade}</td>
             {comPreco && <><td className="r tnum">{i.em_falta ? "—" : `${qtd(q)} ${i.unidade}`}</td>
-              <td className="r tnum">{i.preco_unitario != null && !i.em_falta ? brl(i.preco_unitario) : "—"}</td>
+              <td className="r tnum">{i.preco_unitario != null && !i.em_falta ? brl(i.preco_unitario) : i.em_falta ? "—" : "a confirmar"}</td>
               <td className="r tnum">{i.preco_unitario != null && !i.em_falta ? brl(Number(q) * Number(i.preco_unitario)) : "—"}</td></>}
           </tr>;
         })}</tbody>
@@ -101,9 +102,10 @@ function Detalhe({ p, onRepetir }: { p: PedidoResumo; onRepetir: (i: Record<stri
           <span className="hint">Produtos</span><span style={{ textAlign: "right" }}>{brl(p.subtotal)}</span>
           {Number(p.taxa_entrega) > 0 && <><span className="hint">Entrega</span><span style={{ textAlign: "right" }}>{brl(p.taxa_entrega)}</span></>}
           {Number(p.desconto) > 0 && <><span className="hint">Desconto</span><span style={{ textAlign: "right" }}>−{brl(p.desconto)}</span></>}
-          <span className="lbl">Total</span><span className="grand">{brl(p.total)}</span>
+          <span className="lbl">{estimado ? "Total estimado" : "Total"}</span><span className="grand">{brl(p.total)}</span>
         </div>
-      ) : p.status === "recebido" && <p className="hint">Os valores aparecem aqui quando a loja aprovar o pedido.</p>}
+      ) : null}
+      {comPreco && estimado && <p className="hint" style={{ textAlign: "right" }}>O valor final é ajustado com o peso separado.{p.itens_sem_preco > 0 ? ` ${p.itens_sem_preco} ${p.itens_sem_preco === 1 ? "item com preço" : "itens com preço"} a confirmar.` : ""}</p>}
       {p.observacoes && <p className="hint"><b>Suas observações:</b> {p.observacoes}</p>}
       <ul className="timeline" style={{ marginTop: 12 }}>{eventos.map(e => <li key={e.id} className="tnum">{dataHora(e.created_at)} · {STATUS_INFO[e.status].rotulo}</li>)}</ul>
       <div className="acoes">

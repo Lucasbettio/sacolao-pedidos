@@ -18,7 +18,7 @@ export function StatusPill({ s }: { s: Status }) {
   return <span className={`pill st-${s}`}>{STATUS_INFO[s].rotulo}</span>;
 }
 
-/** Barra de progresso do pedido: recebido → aprovado → preparando → em entrega → entregue */
+/** Barra de progresso do pedido: novo → em preparo → em entrega → entregue */
 export function Trilha({ s }: { s: Status }) {
   if (s === "cancelado") return null;
   const ix = FLUXO.indexOf(s);

@@ -26,8 +26,8 @@ export default function Login() {
           <p style={{ opacity: .9, maxWidth: "48ch", fontSize: 16 }}>Área de pedidos para clientes cadastrados do Sacolão da Chácara.</p>
         </div>
         <ol>
-          <li><b>1</b>Monte a lista com quilos, maços, dúzias e bandejas.</li>
-          <li><b>2</b>A loja confere os preços do dia e aprova o pedido.</li>
+          <li><b>1</b>Monte a lista com quilos, molhos, dúzias e bandejas.</li>
+          <li><b>2</b>A loja separa e confere o peso de cada item.</li>
           <li><b>3</b>Acompanhe aqui até a entrega chegar.</li>
         </ol>
       </section>

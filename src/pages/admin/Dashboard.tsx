@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { supabase, msgErro } from "../../lib/supabase";
 import { brl, hojeISO, qtd } from "../../lib/format";
-import { STATUS_INFO, type Status } from "../../lib/types";
+import { STATUS_INFO, STATUS_USADOS, type Status } from "../../lib/types";
 import { Carregando } from "../../components/ui";
 
 interface Dados {
@@ -54,12 +54,12 @@ export default function Dashboard() {
     <>
       {head}
       <div className="kpis">
-        <div className="kpi"><small>Faturamento aprovado</small><b className="tnum">{brl(d.faturamento)}</b><small>pedidos aprovados até entregues</small></div>
+        <div className="kpi"><small>Faturamento</small><b className="tnum">{brl(d.faturamento)}</b><small>pedidos não cancelados</small></div>
         <div className="kpi"><small>Pedidos</small><b className="tnum">{d.pedidos}</b><small>{d.cancelados} cancelados no período</small></div>
-        <div className="kpi"><small>Ticket médio</small><b className="tnum">{brl(d.ticket_medio)}</b><small>por pedido aprovado</small></div>
-        <div className="kpi"><small>Clientes atendidos</small><b className="tnum">{d.clientes}</b><small>{d.aguardando} pedidos esperando aprovação agora</small></div>
+        <div className="kpi"><small>Ticket médio</small><b className="tnum">{brl(d.ticket_medio)}</b><small>por pedido</small></div>
+        <div className="kpi"><small>Clientes atendidos</small><b className="tnum">{d.clientes}</b><small>{d.aguardando} pedidos novos esperando preparo</small></div>
       </div>
-      {vazio ? <div className="card empty" style={{ marginTop: 16 }}><h3>Sem pedidos neste período</h3><p>Os gráficos aparecem assim que os primeiros pedidos forem aprovados.</p></div> : (
+      {vazio ? <div className="card empty" style={{ marginTop: 16 }}><h3>Sem pedidos neste período</h3><p>Os gráficos aparecem assim que chegarem os primeiros pedidos.</p></div> : (
         <div className="charts">
           <div className="card wide"><h3>Faturamento por dia</h3>
             <ResponsiveContainer width="100%" height={240}>
@@ -78,7 +78,7 @@ export default function Dashboard() {
                 <span className="nm" title={p.nome}>{p.nome}</span>
                 <span className="bar"><i style={{ width: `${(Number(p.valor) / maxProd) * 100}%` }} /></span>
                 <span className="tnum hint" style={{ textAlign: "right" }}>{brl(p.valor)} · {qtd(p.quantidade)} {p.unidade}</span>
-              </div>)) : <p className="hint">Sem pedidos aprovados no período.</p>}
+              </div>)) : <p className="hint">Sem pedidos no período.</p>}
           </div>
           <div className="card"><h3>Clientes que mais compram</h3>
             {d.top_clientes.length ? d.top_clientes.map(c => (
@@ -86,7 +86,7 @@ export default function Dashboard() {
                 <span className="nm" title={c.nome}>{c.nome}</span>
                 <span className="bar"><i style={{ width: `${(Number(c.valor) / maxCli) * 100}%`, background: "var(--tomato)" }} /></span>
                 <span className="tnum hint" style={{ textAlign: "right" }}>{brl(c.valor)} · {c.pedidos} ped.</span>
-              </div>)) : <p className="hint">Sem pedidos aprovados no período.</p>}
+              </div>)) : <p className="hint">Sem pedidos no período.</p>}
           </div>
           <div className="card"><h3>Pedidos por dia da semana</h3>
             <ResponsiveContainer width="100%" height={200}>
@@ -100,7 +100,7 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
           <div className="card"><h3>Situação dos pedidos</h3>
-            <table className="t"><tbody>{(Object.keys(STATUS_INFO) as Status[]).map(s => (
+            <table className="t"><tbody>{STATUS_USADOS.map(s => (
               <tr key={s}><td><span className={`pill st-${s}`}>{STATUS_INFO[s].rotulo}</span></td><td className="r tnum"><b>{d.por_status[s] ?? 0}</b></td></tr>))}</tbody></table>
             {d.em_falta.length > 0 && <>
               <h3 style={{ marginTop: 18 }}>Mais vezes em falta</h3>

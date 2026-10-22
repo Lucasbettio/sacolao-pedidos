@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase, msgErro } from "../../lib/supabase";
 import { useAuth } from "../../lib/auth";
-import { hojeISO, dataCurta, qtd, slug } from "../../lib/format";
-import type { Produto, Unidade } from "../../lib/types";
+import { brl, hojeISO, dataCurta, qtd, slug } from "../../lib/format";
+import type { Cliente, Produto, Unidade } from "../../lib/types";
 import { Carregando, toast } from "../../components/ui";
 
 export interface ItemCarrinho { produto_id: number | null; nome: string; quantidade: number; unidade: Unidade }
@@ -16,9 +16,21 @@ function lerCarrinho(cid: string): Record<string, ItemCarrinho> {
 }
 const passo = (u: Unidade) => (u === "kg" ? 0.5 : 1);
 
-export default function NovoPedido() {
+/** Preço que vale para o item: só quando a unidade pedida é a unidade de venda do produto. */
+export function precoDoItem(p: Produto | undefined, unidade: Unidade) {
+  return p && p.preco != null && p.unidade === unidade ? Number(p.preco) : null;
+}
+
+/** Cliente fictício usado na prévia do admin. */
+const CLIENTE_PREVIA: Cliente = {
+  id: "previa", user_id: null, usuario: "previa", nome: "Cliente de exemplo", nome_fantasia: null, documento: null,
+  telefone: null, email_contato: null, endereco: "Endereço do cadastro do cliente", bairro: null, complemento: null,
+  cidade: null, cep: null, observacoes: null, ativo: true, created_at: "",
+};
+
+export default function NovoPedido({ previa = false }: { previa?: boolean }) {
   const { perfil } = useAuth();
-  const cliente = perfil.tipo === "cliente" ? perfil.cliente : null;
+  const cliente = previa ? CLIENTE_PREVIA : perfil.tipo === "cliente" ? perfil.cliente : null;
   const nav = useNavigate();
   const [produtos, setProdutos] = useState<Produto[] | null>(null);
   const [carrinho, setCarrinho] = useState<Record<string, ItemCarrinho>>(() => (cliente ? lerCarrinho(cliente.id) : {}));
@@ -73,7 +85,12 @@ export default function NovoPedido() {
   };
 
   const itens = Object.entries(carrinho);
+  const porId = new Map(produtos.map(p => [p.id, p]));
+  const precoItem = (i: ItemCarrinho) => precoDoItem(i.produto_id != null ? porId.get(i.produto_id) : undefined, i.unidade);
+  const totalEstimado = itens.reduce((s, [, i]) => s + (precoItem(i) ?? 0) * i.quantidade, 0);
+  const aConfirmar = itens.filter(([, i]) => precoItem(i) == null).length;
   async function enviar() {
+    if (previa) return;
     setErro("");
     const end = outroEnd ? endereco.trim() : enderecoCadastro;
     if (!end) { setErro("Informe o endereço de entrega."); return; }
@@ -97,6 +114,7 @@ export default function NovoPedido() {
       <div className="body">
         {itens.length ? <ul className="cart">{itens.map(([k, i]) => (
           <li key={k}><span className="q tnum">{qtd(i.quantidade)} {i.unidade}</span><span className="n">{i.nome}</span>
+            <span className="tnum hint" style={{ whiteSpace: "nowrap" }}>{precoItem(i) != null ? brl(precoItem(i)! * i.quantidade) : "a confirmar"}</span>
             <button className="x" onClick={() => remove(k)} aria-label={`Remover ${i.nome}`}>✕</button></li>))}</ul>
           : <p className="hint">Sua lista está vazia. Toque em “Adicionar” nos produtos.</p>}
         <div style={{ display: "flex", gap: 6 }}>
@@ -121,16 +139,22 @@ export default function NovoPedido() {
         <label className="field"><span>Observações</span><textarea className="inp" id="obs" value={obs} onChange={e => setObs(e.target.value)} placeholder="Ex.: bananas mais verdes, tomate para molho" /></label>
       </div>
       <footer>
+        {itens.length > 0 && <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <span className="lbl">Total estimado</span><span className="sp" />
+          <span className="tnum" style={{ fontFamily: "var(--f-display)", fontSize: 22, fontWeight: 700 }}>{brl(totalEstimado)}</span>
+        </div>}
         {erro && <p className="erro" role="alert" style={{ margin: 0 }}>{erro}</p>}
-        <button className="btn block" disabled={!itens.length || enviando} onClick={enviar}>{enviando ? "Enviando…" : "Enviar pedido"}</button>
-        <p className="hint" style={{ margin: 0 }}>O preço vem na aprovação, com os valores do dia e o peso conferido.</p>
+        <button className="btn block" disabled={!itens.length || enviando || previa} onClick={enviar}>{previa ? "Envio desativado na prévia" : enviando ? "Enviando…" : "Enviar pedido"}</button>
+        <p className="hint" style={{ margin: 0 }}>Itens por quilo podem variar um pouco no peso. O valor final aparece no pedido depois da separação.{aConfirmar > 0 ? ` ${aConfirmar} ${aConfirmar === 1 ? "item com preço" : "itens com preço"} a confirmar pela loja.` : ""}</p>
       </footer>
     </aside>
   );
 
   return (
     <>
-      <div className="ptitle"><h1>Fazer pedido</h1></div>
+      {previa && <div className="endbox" style={{ marginBottom: 14, background: "var(--amber-soft)", color: "var(--ink)" }}>
+        <b>Prévia do cliente.</b> É assim que os clientes veem o catálogo, com os preços atuais. Dá para montar uma lista de teste, mas nada é enviado daqui.</div>}
+      <div className="ptitle"><h1>{previa ? "Visão do cliente" : "Fazer pedido"}</h1></div>
       <div className="shop">
         <div>
           <div className="toolbar">
@@ -152,7 +176,7 @@ export default function NovoPedido() {
                   const unidades: Unidade[] = p.aceita_unidade ? [p.unidade, "un"] : [p.unidade];
                   return (
                     <div className={`prod ${it ? "on" : ""}`} key={p.id}>
-                      <div className="nm"><b>{p.nome}</b><span>por {p.aceita_unidade ? `${p.unidade} ou unidade` : p.unidade}</span></div>
+                      <div className="nm"><b>{p.nome}</b><span className="tnum">{p.preco != null ? <><b style={{ display: "inline", color: "var(--ink)" }}>{brl(p.preco)}</b>/{p.unidade}</> : "preço a confirmar"}{p.aceita_unidade ? " · também por unidade" : ""}</span></div>
                       {it && unidades.length > 1 && <select className="unit" value={it.unidade} onChange={e => trocaUnidade(p, e.target.value as Unidade)} aria-label="Unidade">
                         {unidades.map(u => <option key={u}>{u}</option>)}</select>}
                       {it ? <span className="step"><button onClick={() => altera(p, -1)} aria-label="Diminuir">−</button>

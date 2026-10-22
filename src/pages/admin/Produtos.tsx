@@ -1,13 +1,38 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, msgErro } from "../../lib/supabase";
-import { brl, dataCurta, slug } from "../../lib/format";
+import { dataCurta, num, slug } from "../../lib/format";
 import { UNIDADES, type Produto, type Unidade } from "../../lib/types";
 import { Carregando, toast } from "../../components/ui";
+
+const precoTxt = (v: number | null) => (v != null ? Number(v).toFixed(2).replace(".", ",") : "");
+
+/** Campo de preço que salva ao sair do campo ou apertar Enter. */
+function CampoPreco({ p, onSalvar }: { p: Produto; onSalvar: (v: number | null) => Promise<void> }) {
+  const [txt, setTxt] = useState(precoTxt(p.preco));
+  useEffect(() => setTxt(precoTxt(p.preco)), [p.preco]);
+  const salvar = async () => {
+    const v = num(txt);
+    const novo = txt.trim() === "" ? null : isNaN(v) || v < 0 ? undefined : Math.round(v * 100) / 100;
+    if (novo === undefined) { toast("Preço inválido"); setTxt(precoTxt(p.preco)); return; }
+    if (novo === (p.preco == null ? null : Number(p.preco))) { setTxt(precoTxt(novo)); return; }
+    await onSalvar(novo);
+  };
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+      <span className="hint">R$</span>
+      <input className="inp tnum" style={{ width: 88, textAlign: "right", padding: "6px 8px" }} id={`preco-${p.id}`} inputMode="decimal"
+        value={txt} placeholder="—" aria-label={`Preço de ${p.nome}`}
+        onChange={e => setTxt(e.target.value)} onBlur={salvar} onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()} />
+      <span className="hint">/{p.unidade}</span>
+    </span>
+  );
+}
 
 export default function Produtos() {
   const [lista, setLista] = useState<Produto[] | null>(null);
   const [busca, setBusca] = useState("");
-  const [novo, setNovo] = useState({ nome: "", categoria: "Frutas", unidade: "kg" as Unidade });
+  const [soSemPreco, setSoSemPreco] = useState(false);
+  const [novo, setNovo] = useState({ nome: "", categoria: "Frutas", unidade: "kg" as Unidade, preco: "" });
 
   const carregar = useCallback(async () => {
     const { data, error } = await supabase.from("produtos").select("*").order("categoria").order("ordem").order("nome");
@@ -18,18 +43,24 @@ export default function Produtos() {
   const categorias = useMemo(() => [...new Set((lista ?? []).map(p => p.categoria))], [lista]);
   if (!lista) return <Carregando />;
 
-  const vis = lista.filter(p => !busca || slug(p.nome + " " + p.categoria).includes(slug(busca)));
-  async function muda(p: Produto, patch: Partial<Produto>) {
+  const vis = lista.filter(p => (!busca || slug(p.nome + " " + p.categoria).includes(slug(busca))) && (!soSemPreco || (p.ativo && p.preco == null)));
+  const semPreco = lista.filter(p => p.ativo && p.preco == null).length;
+
+  async function muda(p: Produto, patch: Partial<Produto>, aviso?: string) {
     setLista(l => l!.map(x => (x.id === p.id ? { ...x, ...patch } : x)));
     const { error } = await supabase.from("produtos").update(patch).eq("id", p.id);
-    if (error) { toast(msgErro(error)); carregar(); }
+    if (error) { toast(msgErro(error)); carregar(); } else if (aviso) toast(aviso);
   }
   async function adicionar() {
     if (!novo.nome.trim()) return;
     const ordem = Math.max(0, ...lista!.filter(p => p.categoria === novo.categoria).map(p => p.ordem)) + 10;
-    const { error } = await supabase.from("produtos").insert({ ...novo, nome: novo.nome.trim(), categoria: novo.categoria.trim() || "Outros", ordem });
+    const preco = num(novo.preco);
+    const { error } = await supabase.from("produtos").insert({
+      nome: novo.nome.trim(), categoria: novo.categoria.trim() || "Outros", unidade: novo.unidade, ordem,
+      preco: isNaN(preco) ? null : Math.round(preco * 100) / 100,
+    });
     if (error) { toast(/duplicate/.test(error.message) ? "Já existe um produto com esse nome." : msgErro(error)); return; }
-    setNovo(n => ({ ...n, nome: "" })); toast("Produto incluído"); carregar();
+    setNovo(n => ({ ...n, nome: "", preco: "" })); toast("Produto incluído"); carregar();
   }
 
   return (
@@ -41,26 +72,30 @@ export default function Produtos() {
           <input className="inp" style={{ flex: "2 1 200px" }} id="np-nome" placeholder="Nome (ex.: Mexerica ponkan)" value={novo.nome} onChange={e => setNovo(n => ({ ...n, nome: e.target.value }))} onKeyDown={e => e.key === "Enter" && adicionar()} />
           <input className="inp" style={{ flex: "1 1 140px" }} id="np-cat" list="cats" placeholder="Categoria" value={novo.categoria} onChange={e => setNovo(n => ({ ...n, categoria: e.target.value }))} />
           <datalist id="cats">{categorias.map(c => <option key={c} value={c} />)}</datalist>
-          <select className="inp" style={{ flex: "0 1 120px" }} id="np-un" value={novo.unidade} onChange={e => setNovo(n => ({ ...n, unidade: e.target.value as Unidade }))}>{UNIDADES.map(u => <option key={u}>{u}</option>)}</select>
+          <select className="inp" style={{ flex: "0 1 110px" }} id="np-un" value={novo.unidade} onChange={e => setNovo(n => ({ ...n, unidade: e.target.value as Unidade }))}>{UNIDADES.map(u => <option key={u}>{u}</option>)}</select>
+          <input className="inp tnum" style={{ flex: "0 1 110px" }} id="np-preco" placeholder="Preço R$" inputMode="decimal" value={novo.preco} onChange={e => setNovo(n => ({ ...n, preco: e.target.value }))} onKeyDown={e => e.key === "Enter" && adicionar()} />
           <button className="btn" onClick={adicionar}>Incluir</button>
         </div>
       </div>
-      <div className="search" style={{ marginBottom: 12, maxWidth: 420 }}>
-        <input id="busca-prod" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar produto" aria-label="Buscar produto" />
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+        <div className="search" style={{ flex: "1 1 260px", maxWidth: 420 }}>
+          <input id="busca-prod" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar produto" aria-label="Buscar produto" />
+        </div>
+        {semPreco > 0 && <button className="chip" aria-pressed={soSemPreco} onClick={() => setSoSemPreco(v => !v)}>Sem preço · {semPreco}</button>}
       </div>
-      <div className="card" style={{ padding: 0 }}><div className="tablewrap" style={{ margin: 0 }}><table className="t" style={{ minWidth: 700 }}>
-        <thead><tr><th style={{ paddingLeft: 16 }}>Produto</th><th>Categoria</th><th>Unidade</th><th>Também por unidade</th><th className="r">Último preço</th><th>À venda</th></tr></thead>
+      <div className="card" style={{ padding: 0 }}><div className="tablewrap" style={{ margin: 0 }}><table className="t" style={{ minWidth: 760 }}>
+        <thead><tr><th style={{ paddingLeft: 16 }}>Produto</th><th>Categoria</th><th>Unidade</th><th>Preço</th><th>Também por unidade</th><th>À venda</th></tr></thead>
         <tbody>{vis.map(p => (
           <tr key={p.id} style={p.ativo ? undefined : { opacity: .55 }}>
-            <td style={{ paddingLeft: 16 }}><b>{p.nome}</b></td>
+            <td style={{ paddingLeft: 16 }}><b>{p.nome}</b>{p.preco_em && <div className="hint">preço de {dataCurta(p.preco_em)}</div>}</td>
             <td>{p.categoria}</td>
             <td><select className="unit" value={p.unidade} onChange={e => muda(p, { unidade: e.target.value as Unidade })} aria-label="Unidade">{UNIDADES.map(u => <option key={u}>{u}</option>)}</select></td>
+            <td><CampoPreco p={p} onSalvar={v => muda(p, { preco: v }, v == null ? `${p.nome}: sem preço` : `${p.nome}: preço salvo`)} /></td>
             <td>{p.unidade === "kg" ? <input type="checkbox" checked={p.aceita_unidade} onChange={e => muda(p, { aceita_unidade: e.target.checked })} aria-label="Aceita pedido por unidade" /> : <span className="hint">—</span>}</td>
-            <td className="r tnum">{p.ultimo_preco != null ? <>{brl(p.ultimo_preco)}<span className="hint">/{p.unidade}{p.preco_em ? ` · ${dataCurta(p.preco_em)}` : ""}</span></> : <span className="hint">—</span>}</td>
             <td><label className="check"><input type="checkbox" checked={p.ativo} onChange={e => muda(p, { ativo: e.target.checked })} /> {p.ativo ? "Sim" : "Fora"}</label></td>
           </tr>))}</tbody>
       </table></div></div>
-      <p className="hint">Produto marcado como “Fora” some do catálogo dos clientes, mas continua nos pedidos antigos. O último preço é atualizado sozinho quando um pedido é aprovado e serve de sugestão no próximo.</p>
+      <p className="hint">O preço aparece no catálogo do cliente e já entra no pedido. Pedidos feitos antes de uma mudança de preço continuam com o valor da época. Produto sem preço aparece como “preço a confirmar”. Itens por quilo pedidos por unidade também ficam a confirmar.</p>
     </>
   );
 }

@@ -1,17 +1,23 @@
 export type Status = "recebido" | "aprovado" | "preparando" | "em_entrega" | "entregue" | "cancelado";
-export type Unidade = "kg" | "un" | "maço" | "dúzia" | "bandeja";
-export const UNIDADES: Unidade[] = ["kg", "un", "maço", "dúzia", "bandeja"];
+export type Unidade = "kg" | "un" | "molho" | "dúzia" | "bandeja";
+export const UNIDADES: Unidade[] = ["kg", "un", "molho", "dúzia", "bandeja"];
 
 export const STATUS_INFO: Record<Status, { rotulo: string; cliente: string }> = {
-  recebido:   { rotulo: "Recebido",    cliente: "Recebemos seu pedido. Vamos conferir e aprovar." },
-  aprovado:   { rotulo: "Aprovado",    cliente: "Pedido aprovado, com os preços do dia." },
-  preparando: { rotulo: "Preparando",  cliente: "Estamos separando seus produtos." },
+  recebido:   { rotulo: "Novo",        cliente: "Recebemos seu pedido." },
+  aprovado:   { rotulo: "Aprovado",    cliente: "Pedido aprovado." },   // não é mais usado
+  preparando: { rotulo: "Em preparo",  cliente: "Estamos separando seus produtos." },
   em_entrega: { rotulo: "Em entrega",  cliente: "Saiu para entrega." },
   entregue:   { rotulo: "Entregue",    cliente: "Pedido entregue." },
   cancelado:  { rotulo: "Cancelado",   cliente: "Pedido cancelado." },
 };
 /** Ordem do fluxo principal (cancelado fica fora). */
-export const FLUXO: Status[] = ["recebido", "aprovado", "preparando", "em_entrega", "entregue"];
+export const FLUXO: Status[] = ["recebido", "preparando", "em_entrega", "entregue"];
+/** Situações que aparecem nos botões e filtros (aprovado ficou só para pedidos antigos). */
+export const STATUS_USADOS: Status[] = ["recebido", "preparando", "em_entrega", "entregue", "cancelado"];
+/** Texto do botão que leva o pedido para a próxima etapa. */
+export const ACAO_PROXIMO: Partial<Record<Status, string>> = {
+  recebido: "Começar preparo", preparando: "Saiu para entrega", em_entrega: "Marcar como entregue",
+};
 
 export interface Cliente {
   id: string; user_id: string | null; usuario: string; nome: string; nome_fantasia: string | null;
@@ -21,7 +27,7 @@ export interface Cliente {
 }
 export interface Produto {
   id: number; nome: string; categoria: string; unidade: Unidade; aceita_unidade: boolean;
-  ativo: boolean; ordem: number; ultimo_preco: number | null; preco_em: string | null;
+  ativo: boolean; ordem: number; preco: number | null; ultimo_preco: number | null; preco_em: string | null;
 }
 export interface PedidoResumo {
   id: string; numero: number; cliente_id: string; status: Status; entrega_data: string;
