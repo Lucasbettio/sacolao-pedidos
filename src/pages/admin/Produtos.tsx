@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, msgErro } from "../../lib/supabase";
 import { dataCurta, num, slug } from "../../lib/format";
 import { UNIDADES, type Produto, type Unidade } from "../../lib/types";
-import { Carregando, toast } from "../../components/ui";
+import { Carregando, Modal, toast } from "../../components/ui";
 import { Th, useOrdenacao } from "../../components/Ordenacao";
 
 const precoTxt = (v: number | null) => (v != null ? Number(v).toFixed(2).replace(".", ",") : "");
@@ -78,6 +78,8 @@ export default function Produtos() {
   const [busca, setBusca] = useState("");
   const [soSemPreco, setSoSemPreco] = useState(false);
   const [novo, setNovo] = useState({ nome: "", categoria: "Frutas", unidade: "kg" as Unidade, preco: "" });
+  const [erroNovo, setErroNovo] = useState("");
+  const [excluindo, setExcluindo] = useState<Produto | null>(null);
 
   const carregar = useCallback(async () => {
     const { data, error } = await supabase.from("produtos").select("*").order("categoria").order("ordem").order("nome");
@@ -102,14 +104,20 @@ export default function Produtos() {
     if (error) { toast(msgErro(error)); carregar(); } else if (aviso) toast(aviso);
   }
   async function adicionar() {
-    if (!novo.nome.trim()) return;
-    const ordem = Math.max(0, ...lista!.filter(p => p.categoria === novo.categoria).map(p => p.ordem)) + 10;
+    const nome = novo.nome.trim();
     const preco = num(novo.preco);
+    if (!nome) { setErroNovo("Digite o nome do produto."); document.getElementById("np-nome")?.focus(); return; }
+    if (novo.preco.trim() && (isNaN(preco) || preco < 0)) {
+      setErroNovo("Preço inválido. Use só números, por exemplo 5,99. Deixe vazio para cadastrar sem preço."); document.getElementById("np-preco")?.focus(); return;
+    }
+    if (lista!.some(p => slug(p.nome) === slug(nome))) { setErroNovo(`Já existe um produto chamado “${nome}”. Busque por ele na lista.`); return; }
+    setErroNovo("");
+    const ordem = Math.max(0, ...lista!.filter(p => p.categoria === novo.categoria).map(p => p.ordem)) + 10;
     const { error } = await supabase.from("produtos").insert({
-      nome: novo.nome.trim(), categoria: novo.categoria.trim() || "Outros", unidade: novo.unidade, ordem,
+      nome, categoria: novo.categoria.trim() || "Outros", unidade: novo.unidade, ordem,
       preco: isNaN(preco) ? null : Math.round(preco * 100) / 100,
     });
-    if (error) { toast(/duplicate/.test(error.message) ? "Já existe um produto com esse nome." : msgErro(error)); return; }
+    if (error) { setErroNovo(/duplicate/.test(error.message) ? "Já existe um produto com esse nome." : msgErro(error)); return; }
     setNovo(n => ({ ...n, nome: "", preco: "" })); toast("Produto incluído"); carregar();
   }
 
@@ -119,13 +127,14 @@ export default function Produtos() {
       <div className="card" style={{ marginBottom: 14 }}>
         <span className="lbl">Novo produto</span>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-          <input className="inp" style={{ flex: "2 1 200px" }} id="np-nome" placeholder="Nome (ex.: Mexerica ponkan)" value={novo.nome} onChange={e => setNovo(n => ({ ...n, nome: e.target.value }))} onKeyDown={e => e.key === "Enter" && adicionar()} />
+          <input className="inp" style={{ flex: "2 1 200px" }} id="np-nome" placeholder="Nome (ex.: Mexerica ponkan)" value={novo.nome} onChange={e => { setErroNovo(""); setNovo(n => ({ ...n, nome: e.target.value })); }} onKeyDown={e => e.key === "Enter" && adicionar()} />
           <input className="inp" style={{ flex: "1 1 140px" }} id="np-cat" list="cats" placeholder="Categoria" value={novo.categoria} onChange={e => setNovo(n => ({ ...n, categoria: e.target.value }))} />
           <datalist id="cats">{categorias.map(c => <option key={c} value={c} />)}</datalist>
           <select className="inp" style={{ flex: "0 1 110px" }} id="np-un" value={novo.unidade} onChange={e => setNovo(n => ({ ...n, unidade: e.target.value as Unidade }))}>{UNIDADES.map(u => <option key={u}>{u}</option>)}</select>
-          <input className="inp tnum" style={{ flex: "0 1 110px" }} id="np-preco" placeholder="Preço R$" inputMode="decimal" value={novo.preco} onChange={e => setNovo(n => ({ ...n, preco: e.target.value }))} onKeyDown={e => e.key === "Enter" && adicionar()} />
+          <input className="inp tnum" style={{ flex: "0 1 110px" }} id="np-preco" placeholder="Preço R$" inputMode="decimal" value={novo.preco} onChange={e => { setErroNovo(""); setNovo(n => ({ ...n, preco: e.target.value })); }} onKeyDown={e => e.key === "Enter" && adicionar()} />
           <button className="btn" onClick={adicionar}>Incluir</button>
         </div>
+        {erroNovo && <p className="erro" role="alert" style={{ margin: "8px 0 0" }}>{erroNovo}</p>}
       </div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
         <div className="search" style={{ flex: "1 1 260px", maxWidth: 420 }}>
@@ -141,7 +150,7 @@ export default function Produtos() {
           <Th chave="unidade" ord={ord} alternar={alternar}>Unidade</Th>
           <Th chave="preco" ord={ord} alternar={alternar}>Preço</Th>
           <th>Também por unidade</th>
-          <Th chave="ativo" ord={ord} alternar={alternar}>À venda</Th></tr></thead>
+          <Th chave="ativo" ord={ord} alternar={alternar}>À venda</Th><th /></tr></thead>
         <tbody>{vis.map(p => (
           <tr key={p.id} style={p.ativo ? undefined : { opacity: .55 }}>
             <td style={{ paddingLeft: 16 }}><FotoProduto p={p} onMudar={url => muda(p, { imagem_url: url }, url ? "Foto salva" : "Foto removida")} /></td>
@@ -151,9 +160,46 @@ export default function Produtos() {
             <td><CampoPreco p={p} onSalvar={v => muda(p, { preco: v }, v == null ? `${p.nome}: sem preço` : `${p.nome}: preço salvo`)} /></td>
             <td>{p.unidade === "kg" ? <input type="checkbox" checked={p.aceita_unidade} onChange={e => muda(p, { aceita_unidade: e.target.checked })} aria-label="Aceita pedido por unidade" /> : <span className="hint">—</span>}</td>
             <td><label className="check"><input type="checkbox" checked={p.ativo} onChange={e => muda(p, { ativo: e.target.checked })} /> {p.ativo ? "Sim" : "Fora"}</label></td>
+            <td style={{ textAlign: "right", paddingRight: 12 }}><button className="btn ghost sm perigo" onClick={() => setExcluindo(p)}>Excluir</button></td>
           </tr>))}</tbody>
       </table></div></div>
+      {excluindo && <ExcluirProduto p={excluindo} onClose={() => setExcluindo(null)}
+        onFora={async () => { await muda(excluindo, { ativo: false }, `${excluindo.nome} marcado como Fora`); setExcluindo(null); }}
+        onExcluido={() => { setExcluindo(null); carregar(); }} />}
       <p className="hint">O preço aparece no catálogo do cliente e já entra no pedido. Pedidos feitos antes de uma mudança de preço continuam com o valor da época. Produto sem preço aparece como “preço a confirmar”. Itens por quilo pedidos por unidade também ficam a confirmar.</p>
     </>
+  );
+}
+
+/** Janela de confirmação para excluir produto. Mostra em quantos pedidos ele aparece. */
+function ExcluirProduto({ p, onClose, onFora, onExcluido }: { p: Produto; onClose: () => void; onFora: () => void; onExcluido: () => void }) {
+  const [usos, setUsos] = useState<number | null>(null);
+  const [apagando, setApagando] = useState(false);
+  useEffect(() => {
+    supabase.from("pedido_itens").select("id", { count: "exact", head: true }).eq("produto_id", p.id)
+      .then(({ count }) => setUsos(count ?? 0));
+  }, [p.id]);
+  async function excluir() {
+    setApagando(true);
+    const { error } = await supabase.from("produtos").delete().eq("id", p.id);
+    if (error) { setApagando(false); toast(msgErro(error)); return; }
+    const foto = caminhoNoStorage(p.imagem_url);
+    if (foto) await supabase.storage.from("produtos").remove([foto]);
+    toast(`“${p.nome}” excluído`); onExcluido();
+  }
+  return (
+    <Modal titulo="Excluir produto" onClose={onClose}>
+      <p style={{ margin: 0 }}>Excluir <b>“{p.nome}”</b> do catálogo? Essa ação não pode ser desfeita.</p>
+      {usos == null ? <p className="hint" style={{ margin: 0 }}>Verificando pedidos…</p> : usos > 0 ? (
+        <p className="endbox" style={{ margin: 0, background: "var(--amber-soft)" }}>
+          Ele aparece em <b>{usos} {usos === 1 ? "item de pedido" : "itens de pedidos"}</b>. Esses pedidos continuam com o nome, a quantidade e o preço, só perdem o vínculo com o catálogo.
+          {p.ativo && " Se pode voltar a vender, prefira marcar como Fora: ele some do catálogo e continua cadastrado."}
+        </p>) : <p className="hint" style={{ margin: 0 }}>Ele não aparece em nenhum pedido.</p>}
+      <div className="acoes" style={{ marginTop: 0 }}>
+        <button className="btn red" disabled={apagando || usos == null} onClick={excluir}>{apagando ? "Excluindo…" : "Excluir produto"}</button>
+        {p.ativo && !!usos && <button className="btn ghost" onClick={onFora}>Marcar como Fora</button>}
+        <button className="btn ghost" onClick={onClose}>Cancelar</button>
+      </div>
+    </Modal>
   );
 }

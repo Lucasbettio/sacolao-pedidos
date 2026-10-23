@@ -282,3 +282,7 @@ table.edit tr.semp .pr input{background:var(--tomato-soft)}
 .th-ord.on{color:var(--green-ink)}
 .th-ord.on .seta{opacity:1}
 th.r .th-ord{flex-direction:row-reverse}
+
+/* Botão de ação destrutiva discreto */
+.btn.ghost.perigo{color:var(--tomato-ink)}
+.btn.ghost.perigo:hover{background:var(--tomato-soft);border-color:var(--tomato)}

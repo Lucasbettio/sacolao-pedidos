@@ -28,7 +28,7 @@ Stack: React + Vite no front, Supabase (Postgres, login e permissões por linha)
 
 ### 1. Supabase
 1. Crie uma conta em supabase.com e um projeto novo. Região **South America (São Paulo)**.
-2. **SQL Editor** → cole e rode, nesta ordem: `supabase/migrations/0001_init.sql`, `0002_produtos_iniciais.sql`, `0003_precos_fluxo_ceasa.sql`, `0004_catalogo_loja.sql`, `0005_fotos_produtos.sql`, `0006_ofertas_historico.sql`, `0007_financeiro_analises.sql` e `0008_fotos_permissoes.sql`.
+2. **SQL Editor** → cole e rode, nesta ordem: `supabase/migrations/0001_init.sql`, `0002_produtos_iniciais.sql`, `0003_precos_fluxo_ceasa.sql`, `0004_catalogo_loja.sql`, `0005_fotos_produtos.sql`, `0006_ofertas_historico.sql`, `0007_financeiro_analises.sql`, `0008_fotos_permissoes.sql` e `0009_excluir_cliente.sql`.
 3. **Authentication → Sign In / Providers**:
    - desligue **Allow new users to sign up** (ninguém se cadastra sozinho);
    - em **Email**, desligue **Confirm email**.

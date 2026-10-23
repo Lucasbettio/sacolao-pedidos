@@ -43,6 +43,7 @@ export default function Clientes() {
   const [busca, setBusca] = useState("");
   const [form, setForm] = useState<Form | null>(null);
   const [cred, setCred] = useState<{ nome: string; usuario: string; senha: string } | null>(null);
+  const [excluindo, setExcluindo] = useState<Cliente | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -118,7 +119,8 @@ export default function Clientes() {
               <td>{c.ativo ? <span className="pill st-em_entrega">Ativo</span> : <span className="pill st-cancelado">Bloqueado</span>}</td>
               <td style={{ whiteSpace: "nowrap", textAlign: "right", paddingRight: 12 }}>
                 <button className="btn ghost sm" onClick={() => { setErro(""); setForm({ ...c, senha: "" }); }}>Editar</button>{" "}
-                <button className="btn ghost sm" onClick={() => alternarAtivo(c)}>{c.ativo ? "Bloquear" : "Liberar"}</button>
+                <button className="btn ghost sm" onClick={() => alternarAtivo(c)}>{c.ativo ? "Bloquear" : "Liberar"}</button>{" "}
+                <button className="btn ghost sm perigo" onClick={() => setExcluindo(c)}>Excluir</button>
               </td>
             </tr>))}</tbody>
         </table></div></div>}
@@ -156,6 +158,10 @@ export default function Clientes() {
         </form>
       </Modal>}
 
+      {excluindo && <ExcluirCliente c={excluindo} onClose={() => setExcluindo(null)}
+        onBloquear={async () => { await alternarAtivo(excluindo); setExcluindo(null); }}
+        onExcluido={() => { setExcluindo(null); carregar(); }} />}
+
       {cred && <Modal titulo="Acesso pronto" onClose={() => setCred(null)}>
         <p className="muted" style={{ margin: 0 }}>Envie estes dados para {cred.nome}. A senha não fica visível depois que esta janela fechar.</p>
         <div className="cred">Usuário: <code>{cred.usuario}</code><br />Senha: <code>{cred.senha}</code></div>
@@ -165,5 +171,48 @@ export default function Clientes() {
         </div>
       </Modal>}
     </>
+  );
+}
+
+/** Confirmação para excluir cliente. Com histórico, não deixa excluir e oferece bloquear. */
+function ExcluirCliente({ c, onClose, onBloquear, onExcluido }: { c: Cliente; onClose: () => void; onBloquear: () => void; onExcluido: () => void }) {
+  const [hist, setHist] = useState<{ pedidos: number; pagamentos: number; notas: number } | null>(null);
+  const [apagando, setApagando] = useState(false);
+  const nome = c.nome_fantasia || c.nome;
+  useEffect(() => {
+    supabase.rpc("historico_cliente", { p_id: c.id }).then(({ data, error }) => {
+      if (error) { toast(msgErro(error)); onClose(); } else setHist(data);
+    });
+  }, [c.id]);
+  const temHistorico = !!hist && hist.pedidos + hist.pagamentos + hist.notas > 0;
+  async function excluir() {
+    setApagando(true);
+    const { error } = await supabase.rpc("excluir_cliente", { p_id: c.id });
+    if (error) { setApagando(false); toast(msgErro(error)); return; }
+    toast(`${nome} excluído`); onExcluido();
+  }
+  const partes = hist ? [
+    hist.pedidos && `${hist.pedidos} ${hist.pedidos === 1 ? "pedido" : "pedidos"}`,
+    hist.pagamentos && `${hist.pagamentos} ${hist.pagamentos === 1 ? "pagamento" : "pagamentos"}`,
+    hist.notas && `${hist.notas} ${hist.notas === 1 ? "nota" : "notas"}`,
+  ].filter(Boolean).join(", ") : "";
+  return (
+    <Modal titulo="Excluir cliente" onClose={onClose}>
+      {!hist ? <p className="hint" style={{ margin: 0 }}>Verificando histórico…</p> : temHistorico ? <>
+        <p style={{ margin: 0 }}><b>{nome}</b> tem {partes} registrados e por isso não pode ser excluído: o histórico de vendas e o financeiro dependem desses dados.</p>
+        <p className="hint" style={{ margin: 0 }}>{c.ativo ? "Para tirar o acesso, bloqueie o cliente. Ele não consegue mais entrar, e o histórico continua nas análises e no financeiro." : "O cliente já está bloqueado e não consegue entrar."}</p>
+        <div className="acoes" style={{ marginTop: 0 }}>
+          {c.ativo && <button className="btn red" onClick={onBloquear}>Bloquear acesso</button>}
+          <button className="btn ghost" onClick={onClose}>{c.ativo ? "Cancelar" : "Fechar"}</button>
+        </div>
+      </> : <>
+        <p style={{ margin: 0 }}>Excluir <b>{nome}</b> e o login <b>{c.usuario}</b>? Essa ação não pode ser desfeita.</p>
+        <p className="hint" style={{ margin: 0 }}>Ele não tem pedidos, pagamentos nem notas.</p>
+        <div className="acoes" style={{ marginTop: 0 }}>
+          <button className="btn red" disabled={apagando} onClick={excluir}>{apagando ? "Excluindo…" : "Excluir cliente"}</button>
+          <button className="btn ghost" onClick={onClose}>Cancelar</button>
+        </div>
+      </>}
+    </Modal>
   );
 }
