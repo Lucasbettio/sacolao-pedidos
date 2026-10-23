@@ -273,3 +273,12 @@ table.edit tr.semp .pr input{background:var(--tomato-soft)}
 .step-qtd{display:inline-flex;align-items:baseline;gap:2px;padding:0 2px}
 .step-qtd small{font-size:12px;color:var(--green-ink);font-weight:600}
 .cart .q .qtd-campo{font-size:14px;color:var(--green-ink);text-align:right}
+
+/* Títulos de coluna ordenáveis */
+.th-ord{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;white-space:nowrap}
+.th-ord:hover{color:var(--ink)}
+.th-ord:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:4px}
+.th-ord .seta{font-size:9px;opacity:.45}
+.th-ord.on{color:var(--green-ink)}
+.th-ord.on .seta{opacity:1}
+th.r .th-ord{flex-direction:row-reverse}

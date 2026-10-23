@@ -3,6 +3,7 @@ import { supabase, msgErro } from "../../lib/supabase";
 import { brl, dataCurta, hojeISO, num, slug } from "../../lib/format";
 import { STATUS_INFO, type Status } from "../../lib/types";
 import { Carregando, Modal, toast } from "../../components/ui";
+import { Th, useOrdenacao } from "../../components/Ordenacao";
 
 interface LinhaCliente {
   cliente_id: string; nome: string; faturado: number; pedidos: number; pago: number; saldo: number;
@@ -47,6 +48,10 @@ export default function Financeiro() {
     const b = slug(busca.trim());
     return (dados?.clientes ?? []).filter(c => (!b || slug(c.nome).includes(b)) && (!soAberto || Math.abs(c.saldo) >= 0.01 || c.sem_nota > 0 || c.em_andamento > 0));
   }, [dados, busca, soAberto]);
+  const { ordenados, ord, alternar } = useOrdenacao(lista, {
+    nome: c => c.nome, faturado: c => Number(c.faturado), pago: c => Number(c.pago), saldo: c => Number(c.saldo),
+    andamento: c => Number(c.em_andamento), sem_nota: c => Number(c.sem_nota), ultimo: c => c.ultimo_pagamento,
+  }, { chave: "saldo", dir: "desc" }, "financeiro");
   if (!dados) return <Carregando />;
 
   const emAberto = dados.clientes.reduce((s, c) => s + Math.max(0, Number(c.saldo)), 0);
@@ -72,8 +77,15 @@ export default function Financeiro() {
       </div>
       {!lista.length ? <div className="card empty"><h3>{dados.clientes.length ? "Nenhuma pendência" : "Ainda não há movimento"}</h3><p>{dados.clientes.length ? "Todos os clientes estão em dia e com nota. Desmarque “Só com pendência” para ver todos." : "Os clientes aparecem aqui quando tiverem pedidos entregues ou pagamentos lançados."}</p></div> : (
         <div className="card" style={{ padding: 0 }}><div className="tablewrap" style={{ margin: 0 }}><table className="t" style={{ minWidth: 820 }}>
-          <thead><tr><th style={{ paddingLeft: 16 }}>Cliente</th><th className="r">Faturado</th><th className="r">Pago</th><th className="r">Em aberto</th><th className="r">Em andamento</th><th className="r">Sem nota</th><th>Último pagamento</th><th /></tr></thead>
-          <tbody>{lista.map(c => (
+          <thead><tr>
+            <Th chave="nome" ord={ord} alternar={alternar} style={{ paddingLeft: 16 }}>Cliente</Th>
+            <Th chave="faturado" ord={ord} alternar={alternar} direita padrao="desc">Faturado</Th>
+            <Th chave="pago" ord={ord} alternar={alternar} direita padrao="desc">Pago</Th>
+            <Th chave="saldo" ord={ord} alternar={alternar} direita padrao="desc">Em aberto</Th>
+            <Th chave="andamento" ord={ord} alternar={alternar} direita padrao="desc">Em andamento</Th>
+            <Th chave="sem_nota" ord={ord} alternar={alternar} direita padrao="desc">Sem nota</Th>
+            <Th chave="ultimo" ord={ord} alternar={alternar} padrao="desc">Último pagamento</Th><th /></tr></thead>
+          <tbody>{ordenados.map(c => (
             <tr key={c.cliente_id}>
               <td style={{ paddingLeft: 16 }}><b>{c.nome}</b><div className="hint tnum">{c.pedidos} entregues{c.ultima_entrega ? ` · último ${dataCurta(c.ultima_entrega)}` : ""}</div></td>
               <td className="r tnum">{brl(c.faturado)}</td>

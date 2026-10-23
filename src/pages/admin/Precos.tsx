@@ -4,6 +4,7 @@ import { brl, dataCurta, emOferta, hojeISO, num, slug } from "../../lib/format";
 import { casar, escolhaClara, lerPreco } from "../../lib/lista";
 import { UNIDADES, type Produto, type Unidade } from "../../lib/types";
 import { Carregando, toast } from "../../components/ui";
+import { porNome } from "../../components/Ordenacao";
 
 const precoTxt = (v: number | null) => (v != null ? Number(v).toFixed(2).replace(".", ",") : "");
 
@@ -163,7 +164,7 @@ export default function Precos() {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end" }}>
           <label className="field" style={{ flex: "2 1 220px" }}><span>Produto</span>
             <input className="inp" id="oferta-produto" list="lista-ofertas" value={novaOferta.nome} onChange={e => setNovaOferta(o => ({ ...o, nome: e.target.value }))} placeholder="Comece a digitar…" /></label>
-          <datalist id="lista-ofertas">{ativos.map(p => <option key={p.id} value={p.nome}>{p.preco != null ? `${brl(p.preco)}/${p.unidade}` : ""}</option>)}</datalist>
+          <datalist id="lista-ofertas">{[...ativos].sort(porNome).map(p => <option key={p.id} value={p.nome}>{p.preco != null ? `${brl(p.preco)}/${p.unidade}` : ""}</option>)}</datalist>
           <label className="field" style={{ flex: "0 1 120px" }}><span>Preço oferta</span>
             <input className="inp tnum" id="oferta-preco" inputMode="decimal" placeholder="R$" value={novaOferta.preco} onChange={e => setNovaOferta(o => ({ ...o, preco: e.target.value }))} /></label>
           <label className="field" style={{ flex: "0 1 160px" }}><span>Vale até</span>
@@ -190,7 +191,7 @@ export default function Precos() {
           <button className="btn sm" disabled={!alterados.length || salvando} onClick={salvarEdicao}>{alterados.length ? `Salvar ${alterados.length} ${alterados.length === 1 ? "preço" : "preços"}` : "Nada alterado"}</button>
         </div>
         {categorias.map(cat => {
-          const ps = lista.filter(p => p.categoria === cat); if (!ps.length) return null;
+          const ps = lista.filter(p => p.categoria === cat).sort(porNome); if (!ps.length) return null;
           return (
             <section key={cat}>
               <h3 style={{ padding: "8px 16px", fontSize: 13, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--green-ink)", background: "var(--bg)", borderTop: "1px solid var(--line)" }}>{cat}</h3>

@@ -3,6 +3,7 @@ import { supabase, msgErro } from "../../lib/supabase";
 import { dataCurta, num, slug } from "../../lib/format";
 import { UNIDADES, type Produto, type Unidade } from "../../lib/types";
 import { Carregando, toast } from "../../components/ui";
+import { Th, useOrdenacao } from "../../components/Ordenacao";
 
 const precoTxt = (v: number | null) => (v != null ? Number(v).toFixed(2).replace(".", ",") : "");
 
@@ -84,10 +85,15 @@ export default function Produtos() {
     setLista((data as Produto[]) ?? []);
   }, []);
   useEffect(() => { carregar(); }, [carregar]);
-  const categorias = useMemo(() => [...new Set((lista ?? []).map(p => p.categoria))], [lista]);
+  const categorias = useMemo(() => [...new Set((lista ?? []).map(p => p.categoria))].sort((a, b) => a.localeCompare(b, "pt-BR")), [lista]);
+  const filtrados = useMemo(() => (lista ?? []).filter(p => (!busca || slug(p.nome + " " + p.categoria).includes(slug(busca))) && (!soSemPreco || (p.ativo && p.preco == null))), [lista, busca, soSemPreco]);
+  const { ordenados: vis, ord, alternar } = useOrdenacao(filtrados, {
+    nome: p => p.nome, categoria: p => `${p.categoria} | ${p.nome}`, unidade: p => p.unidade,
+    preco: p => (p.preco == null ? null : Number(p.preco)), ativo: p => (p.ativo ? 0 : 1),
+    foto: p => (p.imagem_url ? 0 : 1),
+  }, { chave: "nome", dir: "asc" }, "produtos");
   if (!lista) return <Carregando />;
 
-  const vis = lista.filter(p => (!busca || slug(p.nome + " " + p.categoria).includes(slug(busca))) && (!soSemPreco || (p.ativo && p.preco == null)));
   const semPreco = lista.filter(p => p.ativo && p.preco == null).length;
 
   async function muda(p: Produto, patch: Partial<Produto>, aviso?: string) {
@@ -128,7 +134,14 @@ export default function Produtos() {
         {semPreco > 0 && <button className="chip" aria-pressed={soSemPreco} onClick={() => setSoSemPreco(v => !v)}>Sem preço · {semPreco}</button>}
       </div>
       <div className="card" style={{ padding: 0 }}><div className="tablewrap" style={{ margin: 0 }}><table className="t" style={{ minWidth: 960 }}>
-        <thead><tr><th style={{ paddingLeft: 16 }}>Foto</th><th>Produto</th><th>Categoria</th><th>Unidade</th><th>Preço</th><th>Também por unidade</th><th>À venda</th></tr></thead>
+        <thead><tr>
+          <Th chave="foto" ord={ord} alternar={alternar} style={{ paddingLeft: 16 }}>Foto</Th>
+          <Th chave="nome" ord={ord} alternar={alternar}>Produto</Th>
+          <Th chave="categoria" ord={ord} alternar={alternar}>Categoria</Th>
+          <Th chave="unidade" ord={ord} alternar={alternar}>Unidade</Th>
+          <Th chave="preco" ord={ord} alternar={alternar}>Preço</Th>
+          <th>Também por unidade</th>
+          <Th chave="ativo" ord={ord} alternar={alternar}>À venda</Th></tr></thead>
         <tbody>{vis.map(p => (
           <tr key={p.id} style={p.ativo ? undefined : { opacity: .55 }}>
             <td style={{ paddingLeft: 16 }}><FotoProduto p={p} onMudar={url => muda(p, { imagem_url: url }, url ? "Foto salva" : "Foto removida")} /></td>

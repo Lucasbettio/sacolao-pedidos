@@ -3,6 +3,7 @@ import { supabase, msgErro } from "../../lib/supabase";
 import { doc, slug } from "../../lib/format";
 import type { Cliente } from "../../lib/types";
 import { Carregando, Modal, copiar, toast } from "../../components/ui";
+import { Th, useOrdenacao } from "../../components/Ordenacao";
 
 async function chamar(body: Record<string, unknown>) {
   const { data, error } = await supabase.functions.invoke("admin-clientes", { body });
@@ -52,10 +53,14 @@ export default function Clientes() {
   }, []);
   useEffect(() => { carregar(); }, [carregar]);
 
-  const vis = useMemo(() => {
+  const filtrados = useMemo(() => {
     const b = slug(busca.trim()); const d = busca.replace(/\D/g, "");
     return (lista ?? []).filter(c => !b || slug(`${c.nome} ${c.nome_fantasia ?? ""} ${c.usuario}`).includes(b) || (d.length >= 3 && (c.documento ?? "").includes(d)));
   }, [lista, busca]);
+  const { ordenados: vis, ord, alternar } = useOrdenacao(filtrados, {
+    nome: c => c.nome_fantasia || c.nome, usuario: c => c.usuario, documento: c => c.documento,
+    telefone: c => c.telefone, bairro: c => c.bairro, ativo: c => (c.ativo ? 0 : 1),
+  }, { chave: "nome", dir: "asc" }, "clientes");
 
   if (!lista) return <Carregando />;
   const novo = !form?.id;
@@ -98,7 +103,13 @@ export default function Clientes() {
       </div>
       {!lista.length ? <div className="card empty"><h3>Nenhum cliente cadastrado</h3><p>Cadastre aqui um por um, ou importe a lista do sistema da loja com o script descrito no guia.</p></div> :
         <div className="card" style={{ padding: 0 }}><div className="tablewrap" style={{ margin: 0 }}><table className="t" style={{ minWidth: 720 }}>
-          <thead><tr><th style={{ paddingLeft: 16 }}>Cliente</th><th>Usuário</th><th>CNPJ/CPF</th><th>WhatsApp</th><th>Bairro</th><th>Acesso</th><th /></tr></thead>
+          <thead><tr>
+            <Th chave="nome" ord={ord} alternar={alternar} style={{ paddingLeft: 16 }}>Cliente</Th>
+            <Th chave="usuario" ord={ord} alternar={alternar}>Usuário</Th>
+            <Th chave="documento" ord={ord} alternar={alternar}>CNPJ/CPF</Th>
+            <Th chave="telefone" ord={ord} alternar={alternar}>WhatsApp</Th>
+            <Th chave="bairro" ord={ord} alternar={alternar}>Bairro</Th>
+            <Th chave="ativo" ord={ord} alternar={alternar}>Acesso</Th><th /></tr></thead>
           <tbody>{vis.map(c => (
             <tr key={c.id} style={c.ativo ? undefined : { opacity: .6 }}>
               <td style={{ paddingLeft: 16 }}><b>{c.nome_fantasia || c.nome}</b>{c.nome_fantasia && <div className="hint">{c.nome}</div>}</td>

@@ -5,6 +5,7 @@ import { brl, dataCurta } from "../../lib/format";
 import { nomeMes, previsaoProximoMes, projecaoMesAtual, resumoClientes, type ClienteMensal, type Mes, type MesAtual } from "../../lib/previsao";
 import { Carregando } from "../../components/ui";
 import Dashboard from "./Dashboard";
+import { Th, useOrdenacao } from "../../components/Ordenacao";
 
 interface Mensal { hoje: string; meses: Mes[]; mes_atual: MesAtual; clientes: ClienteMensal[] }
 const eixo = { fill: "var(--muted)", fontSize: 12 };
@@ -109,8 +110,12 @@ function Legenda({ cor, borda }: { cor: string; borda?: boolean | string }) {
 function Clientes({ d }: { d: Mensal }) {
   const ultimos = d.meses.slice(-6).map(m => m.mes);
   const lista = useMemo(() => resumoClientes(d.clientes.filter(c => Number(c.total) > 0), d.meses.map(m => m.mes), d.hoje), [d]);
-  const [ordem, setOrdem] = useState<"total" | "previsao" | "dias">("total");
-  const ordenada = [...lista].sort((a, b) => ordem === "dias" ? b.diasSemPedir - a.diasSemPedir : ordem === "previsao" ? b.previsao - a.previsao : Number(b.total) - Number(a.total));
+  const colunas: Record<string, (c: (typeof lista)[number]) => string | number | null> = {
+    nome: c => c.nome, total: c => Number(c.total), media3: c => c.media3, tendencia: c => c.tendencia,
+    previsao: c => c.previsao, dias: c => c.diasSemPedir,
+  };
+  ultimos.forEach(m => { colunas["m:" + m] = c => Number(c.meses[m] ?? 0); });
+  const { ordenados: ordenada, ord, alternar } = useOrdenacao(lista, colunas, { chave: "total", dir: "desc" }, "analise_clientes");
   const sumidos = lista.filter(c => c.sumiu);
   const previsaoTotal = lista.reduce((s, c) => s + c.previsao, 0);
 
@@ -126,14 +131,14 @@ function Clientes({ d }: { d: Mensal }) {
       {sumidos.length > 0 && <div className="endbox" style={{ marginTop: 14, background: "var(--tomato-soft)" }}>
         <b>Vale ligar:</b> {sumidos.map(c => `${c.nome} (sem pedir há ${c.diasSemPedir} dias; costuma pedir a cada ${Math.round(c.intervaloMedio!)})`).join(" · ")}
       </div>}
-      <div style={{ display: "flex", gap: 6, alignItems: "center", margin: "14px 0 8px", flexWrap: "wrap" }}>
-        <span className="hint">Ordenar por</span>
-        {([["total", "Total gasto"], ["previsao", "Previsão"], ["dias", "Dias sem pedir"]] as const).map(([k, l]) =>
-          <button key={k} className="chip" aria-pressed={ordem === k} onClick={() => setOrdem(k)}>{l}</button>)}
-      </div>
+      <p className="hint" style={{ margin: "14px 0 8px" }}>Toque no título de uma coluna para ordenar. {ord.chave === "total" ? "Ordem atual: quem mais gastou no período." : ""}</p>
       <div className="card" style={{ padding: 0 }}><div className="tablewrap" style={{ margin: 0 }}><table className="t" style={{ minWidth: 980 }}>
-        <thead><tr><th style={{ paddingLeft: 16 }}>Cliente</th>{ultimos.map((m, i) => <th key={m} className="r">{nomeMes(m)}{i === ultimos.length - 1 ? "*" : ""}</th>)}
-          <th className="r">Média 3 meses</th><th className="r">Tendência</th><th className="r">Previsão próx. mês</th><th>Último pedido</th></tr></thead>
+        <thead><tr><Th chave="nome" ord={ord} alternar={alternar} style={{ paddingLeft: 16 }}>Cliente</Th>
+          {ultimos.map((m, i) => <Th key={m} chave={"m:" + m} ord={ord} alternar={alternar} direita padrao="desc">{nomeMes(m)}{i === ultimos.length - 1 ? "*" : ""}</Th>)}
+          <Th chave="media3" ord={ord} alternar={alternar} direita padrao="desc">Média 3 meses</Th>
+          <Th chave="tendencia" ord={ord} alternar={alternar} direita padrao="desc">Tendência</Th>
+          <Th chave="previsao" ord={ord} alternar={alternar} direita padrao="desc">Previsão próx. mês</Th>
+          <Th chave="dias" ord={ord} alternar={alternar} padrao="desc">Último pedido</Th></tr></thead>
         <tbody>{ordenada.map(c => (
           <tr key={c.cliente_id} style={c.sumiu ? { background: "var(--tomato-soft)" } : undefined}>
             <td style={{ paddingLeft: 16 }}><b>{c.nome}</b><div className="hint tnum">{c.pedidos} pedidos{c.intervaloMedio != null ? ` · a cada ${Math.round(c.intervaloMedio)} dias` : ""}</div></td>

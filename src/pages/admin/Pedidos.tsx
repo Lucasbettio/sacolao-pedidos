@@ -20,6 +20,9 @@ export default function AdminPedidos() {
   const nav = useNavigate();
   const [lista, setLista] = useState<PedidoResumo[] | null>(null);
   const [exportando, setExportando] = useState(false);
+  const [ordemPed, setOrdemPed] = useState<"auto" | "recentes" | "entrega" | "cliente" | "valor">(() => {
+    try { return (localStorage.getItem("sacolao_ord_pedidos") as never) || "auto"; } catch { return "auto"; }
+  });
   const [filtro, setFiltro] = useState("novos");
   const [busca, setBusca] = useState("");
 
@@ -44,9 +47,14 @@ export default function AdminPedidos() {
     const f = FILTROS.find(x => x[0] === filtro)![2];
     const b = slug(busca.trim());
     return lista.filter(p => f(p) && (!b || slug(`${p.cliente_nome} ${p.cliente_fantasia ?? ""} ${p.numero}`).includes(b)))
-      .sort((a, b) => ["preparo", "entrega", "hoje"].includes(filtro)
-        ? a.entrega_data.localeCompare(b.entrega_data) || a.entrega_turno.localeCompare(b.entrega_turno) : 0);
-  }, [lista, filtro, busca]);
+      .sort((a, b) => {
+        const modo = ordemPed === "auto" ? (["preparo", "entrega", "hoje"].includes(filtro) ? "entrega" : "recentes") : ordemPed;
+        if (modo === "entrega") return a.entrega_data.localeCompare(b.entrega_data) || a.entrega_turno.localeCompare(b.entrega_turno) || a.numero - b.numero;
+        if (modo === "cliente") return (a.cliente_fantasia || a.cliente_nome).localeCompare(b.cliente_fantasia || b.cliente_nome, "pt-BR", { sensitivity: "base" });
+        if (modo === "valor") return Number(b.total) - Number(a.total);
+        return b.created_at.localeCompare(a.created_at);
+      });
+  }, [lista, filtro, busca, ordemPed]);
 
   if (!lista) return <Carregando />;
   const conta = (k: string) => lista.filter(FILTROS.find(x => x[0] === k)![2]).length;
@@ -69,6 +77,14 @@ export default function AdminPedidos() {
           <div className="search" style={{ marginBottom: 10 }}>
             <input id="busca-pedido" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar cliente ou nº do pedido" aria-label="Buscar pedido" />
           </div>
+          <label className="field" style={{ marginBottom: 10 }}><span>Ordenar</span>
+            <select className="inp" id="ordem-pedidos" value={ordemPed} onChange={e => { const v = e.target.value as typeof ordemPed; setOrdemPed(v); try { localStorage.setItem("sacolao_ord_pedidos", v); } catch { /* sem armazenamento */ } }}>
+              <option value="auto">Automático (novos primeiro; em preparo por entrega)</option>
+              <option value="recentes">Mais recentes primeiro</option>
+              <option value="entrega">Entrega mais próxima</option>
+              <option value="cliente">Cliente (A–Z)</option>
+              <option value="valor">Maior valor</option>
+            </select></label>
           <div className="chips" style={{ flexWrap: "wrap", marginBottom: 10 }}>
             {FILTROS.map(([k, l]) => <button key={k} className="chip" aria-pressed={filtro === k} onClick={() => setFiltro(k)}>
               {l}{k !== "todos" && k !== "fechados" ? ` · ${conta(k)}` : ""}</button>)}

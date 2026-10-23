@@ -6,6 +6,7 @@ import { brl, hojeISO, dataCurta, emOferta, precoVigente, qtd, slug } from "../.
 import type { Cliente, Produto, Unidade } from "../../lib/types";
 import { Carregando, toast } from "../../components/ui";
 import ColarLista, { type ItemColado } from "../../components/ColarLista";
+import { porNome } from "../../components/Ordenacao";
 
 export interface ItemCarrinho { produto_id: number | null; nome: string; quantidade: number; unidade: Unidade }
 const chaveCarrinho = (cid: string) => `sacolao_carrinho_${cid}`;
@@ -223,14 +224,14 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
                         : <button className="add" onClick={() => altera(p, 1)}>Adicionar</button>}
                     </div>);
 };
-            const ofertas = cat === "Todos" && !busca.trim() ? produtos.filter(p => emOferta(p)) : [];
+            const ofertas = cat === "Todos" && !busca.trim() ? produtos.filter(p => emOferta(p)).sort(porNome) : [];
             return <>
               {ofertas.length > 0 && (
                 <section className="banca ofertas"><h2>Ofertas do dia</h2><div className="rows">
                   {ofertas.map(p => linha(p, "of" + p.id))}
                 </div></section>)}
               {categorias.filter(c => cat === "Todos" || c === cat).map(c => {
-                const ps = filtrados.filter(p => p.categoria === c);
+                const ps = filtrados.filter(p => p.categoria === c).sort(porNome);
                 if (!ps.length) return null;
                 return <section className="banca" key={c}><h2>{c}</h2><div className="rows">{ps.map(p => linha(p, String(p.id)))}</div></section>;
               })}
