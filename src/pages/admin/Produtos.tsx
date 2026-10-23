@@ -26,7 +26,7 @@ function FotoProduto({ p, onMudar }: { p: Produto; onMudar: (url: string | null)
     try {
       const blob = await reduzir(arquivo);
       const caminho = `${p.id}-${Date.now()}.jpg`;
-      const { error } = await supabase.storage.from("produtos").upload(caminho, blob, { contentType: "image/jpeg", upsert: true });
+      const { error } = await supabase.storage.from("produtos").upload(caminho, blob, { contentType: "image/jpeg", upsert: false });
       if (error) throw error;
       const antigo = caminhoNoStorage(p.imagem_url);
       await onMudar(supabase.storage.from("produtos").getPublicUrl(caminho).data.publicUrl);
