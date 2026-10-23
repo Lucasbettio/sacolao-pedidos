@@ -169,7 +169,6 @@ function Editor({ p }: { p: PedidoResumo }) {
       <div className="infos">
         <div><span className="lbl">Entrega</span><br />{dataCurta(p.entrega_data)} · {p.entrega_turno}</div>
         <div><span className="lbl">Endereço</span><br />{p.endereco_entrega}</div>
-        <div><span className="lbl">Pagamento</span><br />{p.pagamento}</div>
         <div><span className="lbl">Contato</span><br /><span className="tnum" style={{ userSelect: "all" }}>{p.cliente_telefone || "—"}</span></div>
         <div><span className="lbl">Substituição</span><br />{p.aceita_substituicao ? "Pode trocar por similar" : "Não trocar"}</div>
         {p.observacoes && <div><span className="lbl">Observações do cliente</span><br />{p.observacoes}</div>}

@@ -37,6 +37,7 @@ export default function Layout() {
               <NavLink to="/admin/precos">Preços de hoje</NavLink>
               <NavLink to="/admin/ceasa">Lista da Ceasa</NavLink>
               <NavLink to="/admin/dashboard">Análises</NavLink>
+              <NavLink to="/admin/financeiro">Financeiro</NavLink>
               <NavLink to="/admin/clientes">Clientes</NavLink>
               <NavLink to="/admin/produtos">Produtos</NavLink>
               <NavLink to="/admin/visao-cliente">Visão do cliente</NavLink>

@@ -68,7 +68,7 @@ export default function Impressao() {
               <section className="folha-dados">
                 <div><span>Cliente</span><b>{p.cliente_fantasia || p.cliente_nome}</b>{p.cliente_fantasia && <small>{p.cliente_nome}</small>}{documento && <small className="tnum">{doc(documento)}</small>}</div>
                 <div><span>Entrega</span><b>{dataCurta(p.entrega_data)} · {p.entrega_turno}</b><small>{p.endereco_entrega}</small></div>
-                <div><span>Contato / pagamento</span><b className="tnum">{p.cliente_telefone || "—"}</b><small>{p.pagamento} · {p.aceita_substituicao ? "aceita similar" : "não trocar"}</small></div>
+                <div><span>Contato</span><b className="tnum">{p.cliente_telefone || "—"}</b><small>{p.aceita_substituicao ? "Aceita troca por similar" : "Não trocar produtos"}</small></div>
               </section>
               <table className="folha-itens">
                 <thead>{comPreco

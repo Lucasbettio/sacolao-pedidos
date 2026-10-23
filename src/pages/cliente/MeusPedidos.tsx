@@ -82,7 +82,7 @@ function Detalhe({ p, onRepetir }: { p: PedidoResumo; onRepetir: (i: Record<stri
       <div className="infos" style={{ marginTop: 14 }}>
         <div><span className="lbl">Entrega</span><br />{dataCurta(p.entrega_data)} · {p.entrega_turno}</div>
         <div><span className="lbl">Endereço</span><br />{p.endereco_entrega}</div>
-        <div><span className="lbl">Pagamento</span><br />{p.pagamento}</div>
+        <div><span className="lbl">Troca por similar</span><br />{p.aceita_substituicao ? "Pode trocar" : "Não trocar"}</div>
       </div>
       <div className="tablewrap"><table className="t">
         <thead><tr><th>Produto</th><th className="r">Pedido</th>{comPreco && <><th className="r">Separado</th><th className="r">Preço</th><th className="r">Subtotal</th></>}</tr></thead>

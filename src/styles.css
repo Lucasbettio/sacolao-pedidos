@@ -265,3 +265,11 @@ table.edit tr.semp .pr input{background:var(--tomato-soft)}
 .conf.ok.on{background:var(--green-soft)}
 .conf.no:hover,.conf.no.on{border-color:var(--tomato);color:var(--tomato-ink)}
 .conf.no.on{background:var(--tomato-soft)}
+
+/* Quantidade digitável no catálogo e na sacola */
+.qtd-campo{border:1px solid transparent;background:transparent;border-radius:6px;padding:4px 2px;text-align:center;font-weight:700;font-size:15px;color:inherit}
+.qtd-campo:hover{border-color:var(--line)}
+.qtd-campo:focus{border-color:var(--green);background:var(--surface);outline:none}
+.step-qtd{display:inline-flex;align-items:baseline;gap:2px;padding:0 2px}
+.step-qtd small{font-size:12px;color:var(--green-ink);font-weight:600}
+.cart .q .qtd-campo{font-size:14px;color:var(--green-ink);text-align:right}

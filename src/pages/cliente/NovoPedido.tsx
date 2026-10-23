@@ -17,6 +17,25 @@ function lerCarrinho(cid: string): Record<string, ItemCarrinho> {
 }
 const passo = (u: Unidade) => (u === "kg" ? 0.5 : 1);
 
+/** Campo de quantidade: o cliente digita o valor (ex.: 25) e confirma ao sair do campo ou com Enter. */
+function CampoQtd({ valor, unidade, onMudar, largura = 54 }: { valor: number; unidade: Unidade; onMudar: (q: number) => void; largura?: number }) {
+  const [txt, setTxt] = useState(qtd(valor));
+  const [editando, setEditando] = useState(false);
+  useEffect(() => { if (!editando) setTxt(qtd(valor)); }, [valor, editando]);
+  const confirmar = () => {
+    setEditando(false);
+    const t = txt.trim().replace(",", ".");
+    const q = t === "" ? 0 : Math.round(parseFloat(t) * 1000) / 1000;
+    if (isNaN(q) || q < 0) { setTxt(qtd(valor)); return; }
+    if (q !== valor) onMudar(q);
+  };
+  return (
+    <input className="qtd-campo tnum" style={{ width: largura }} inputMode="decimal" value={txt} aria-label={`Quantidade em ${unidade}`}
+      onFocus={e => { setEditando(true); e.target.select(); }} onChange={e => setTxt(e.target.value)} onBlur={confirmar}
+      onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") { setTxt(qtd(valor)); setEditando(false); (e.target as HTMLInputElement).blur(); } }} />
+  );
+}
+
 /** Preço que vale para o item: só quando a unidade pedida é a unidade de venda do produto. */
 export function precoDoItem(p: Produto | undefined, unidade: Unidade) {
   return p && p.unidade === unidade ? precoVigente(p) : null;
@@ -49,7 +68,6 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
   const dias = useMemo(() => Array.from({ length: 7 }, (_, i) => hojeISO(i)), []);
   const [dia, setDia] = useState(dias[1]);
   const [turno, setTurno] = useState("manhã");
-  const [pagamento, setPagamento] = useState("Pix");
   const [subst, setSubst] = useState(true);
   const [obs, setObs] = useState("");
 
@@ -80,6 +98,12 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
     return { ...c, [p.id]: { ...atual, unidade: u, quantidade: Math.max(1, Math.round(atual.quantidade)) } };
   });
   const remove = (k: string) => setCarrinho(c => { const n = { ...c }; delete n[k]; return n; });
+  /** Quantidade digitada: 0 tira o item da lista. */
+  const definirQtd = (k: string, base: ItemCarrinho, q: number) => setCarrinho(c => {
+    const n = { ...c };
+    if (q <= 0) delete n[k]; else n[k] = { ...(n[k] ?? base), quantidade: q };
+    return n;
+  });
   const adicionarColados = (novos: ItemColado[]) => {
     setCarrinho(c => {
       const n = { ...c };
@@ -113,7 +137,7 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
     if (!end) { setErro("Informe o endereço de entrega."); return; }
     setEnviando(true);
     const { data, error } = await supabase.rpc("criar_pedido", {
-      p_entrega_data: dia, p_entrega_turno: turno, p_endereco: end, p_pagamento: pagamento,
+      p_entrega_data: dia, p_entrega_turno: turno, p_endereco: end, p_pagamento: null,
       p_aceita_substituicao: subst, p_observacoes: obs,
       p_itens: itens.map(([, i]) => ({ produto_id: i.produto_id, nome: i.nome, quantidade: i.quantidade, unidade: i.unidade })),
     });
@@ -130,7 +154,7 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
         {aberto && <button className="x" onClick={() => setAberto(false)} aria-label="Fechar">✕</button>}</header>
       <div className="body">
         {itens.length ? <ul className="cart">{itens.map(([k, i]) => (
-          <li key={k}><span className="q tnum">{qtd(i.quantidade)} {i.unidade}</span><span className="n">{i.nome}</span>
+          <li key={k}><span className="q tnum"><CampoQtd valor={i.quantidade} unidade={i.unidade} largura={58} onMudar={q => definirQtd(k, i, q)} /> {i.unidade}</span><span className="n">{i.nome}</span>
             <span className="tnum hint" style={{ whiteSpace: "nowrap" }}>{precoItem(i) != null ? brl(precoItem(i)! * i.quantidade) : "a confirmar"}</span>
             <button className="x" onClick={() => remove(k)} aria-label={`Remover ${i.nome}`}>✕</button></li>))}</ul>
           : <p className="hint">Sua lista está vazia. Toque em “Adicionar” nos produtos.</p>}
@@ -150,8 +174,6 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
           <label className="field"><span>Turno</span><select className="inp" id="turno" value={turno} onChange={e => setTurno(e.target.value)}>
             <option>manhã</option><option>tarde</option></select></label>
         </div>
-        <label className="field"><span>Pagamento</span><select className="inp" id="pag" value={pagamento} onChange={e => setPagamento(e.target.value)}>
-          {["Pix", "Boleto", "Cartão na entrega", "Dinheiro", "Faturado"].map(p => <option key={p}>{p}</option>)}</select></label>
         <label className="check"><input type="checkbox" checked={subst} onChange={e => setSubst(e.target.checked)} /> Se faltar algum produto, pode trocar por similar</label>
         <label className="field"><span>Observações</span><textarea className="inp" id="obs" value={obs} onChange={e => setObs(e.target.value)} placeholder="Ex.: bananas mais verdes, tomate para molho" /></label>
       </div>
@@ -196,7 +218,7 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
                       {it && unidades.length > 1 && <select className="unit" value={it.unidade} onChange={e => trocaUnidade(p, e.target.value as Unidade)} aria-label="Unidade">
                         {unidades.map(u => <option key={u}>{u}</option>)}</select>}
                       {it ? <span className="step"><button onClick={() => altera(p, -1)} aria-label="Diminuir">−</button>
-                        <output className="tnum">{qtd(it.quantidade)} {it.unidade}</output>
+                        <span className="step-qtd"><CampoQtd valor={it.quantidade} unidade={it.unidade} onMudar={q => definirQtd(String(p.id), it, q)} /><small>{it.unidade}</small></span>
                         <button onClick={() => altera(p, 1)} aria-label="Aumentar">+</button></span>
                         : <button className="add" onClick={() => altera(p, 1)}>Adicionar</button>}
                     </div>);

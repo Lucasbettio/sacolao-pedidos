@@ -38,7 +38,7 @@ export default function Dashboard() {
   }, [per]);
 
   const head = (
-    <div className="ptitle"><h1>Análises</h1><span className="sp" />
+    <div className="ptitle"><h2 style={{ fontSize: 20 }}>Produtos e período</h2><span className="sp" />
       <div className="chips">{PERIODOS.map(([k, l]) => <button key={k} className="chip" aria-pressed={per === k} onClick={() => setPer(k)}>{l}</button>)}</div></div>
   );
   if (erro) return <>{head}<p className="erro">{erro}</p></>;

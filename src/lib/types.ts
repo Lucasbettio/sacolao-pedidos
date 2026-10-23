@@ -32,11 +32,11 @@ export interface Produto {
 }
 export interface PedidoResumo {
   id: string; numero: number; cliente_id: string; status: Status; entrega_data: string;
-  entrega_turno: string; endereco_entrega: string; pagamento: string; aceita_substituicao: boolean;
+  entrega_turno: string; endereco_entrega: string; pagamento: string | null; aceita_substituicao: boolean;
   observacoes: string | null; taxa_entrega: number; desconto: number; nota_admin: string | null;
   created_at: string; updated_at: string; aprovado_em: string | null; entregue_em: string | null;
   cliente_nome: string; cliente_fantasia: string | null; cliente_telefone: string | null;
-  itens: number; itens_sem_preco: number; subtotal: number; total: number;
+  itens: number; itens_sem_preco: number; subtotal: number; total: number; nota_id?: number | null;
 }
 export interface Item {
   id: number; pedido_id: string; produto_id: number | null; nome: string; quantidade: number;

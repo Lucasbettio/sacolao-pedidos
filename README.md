@@ -9,6 +9,9 @@ Clientes cadastrados entram com usuário e senha, montam o pedido e enviam. A lo
 - **Visão do cliente:** prévia do catálogo como o cliente vê, sem enviar pedido.
 - **Colar lista:** o cliente cola a lista do WhatsApp ("2 kg tomate", "3 alface", "1 dz ovos") e o sistema encontra os produtos; quando há mais de um parecido, ele escolhe.
 - **Preços de hoje:** colar a tabela de preços inteira (WhatsApp, planilha) e conferir antes de salvar, ou editar rápido por categoria.
+- **Análises mês a mês:** faturamento por mês (pela data de entrega), projeção do mês atual, previsão do próximo mês e, por cliente, quanto gastou em cada mês, tendência e quem parou de pedir.
+- **Financeiro:** conta corrente por cliente (pedidos entregues a receber, pagamentos lançados livremente, saldo em aberto), registro de notas fiscais cobrindo vários pedidos e lista do que está sem nota. O pedido não pede forma de pagamento: a cobrança é feita depois.
+- **Quantidade digitável:** no catálogo e na sacola o cliente digita a quantidade (ex.: 25 kg), além do − e +.
 - **Ofertas do dia:** preço promocional com data de validade, em destaque no topo do catálogo e já aplicado no pedido.
 - **Conferência no preparo:** ✓ (separado) e ✗ (em falta) em cada item, com contador e "marcar o resto como separado".
 - **Histórico de preços:** toda mudança de preço fica registrada (base para variação e comparação com a Ceasa).
@@ -25,7 +28,7 @@ Stack: React + Vite no front, Supabase (Postgres, login e permissões por linha)
 
 ### 1. Supabase
 1. Crie uma conta em supabase.com e um projeto novo. Região **South America (São Paulo)**.
-2. **SQL Editor** → cole e rode, nesta ordem: `supabase/migrations/0001_init.sql`, `0002_produtos_iniciais.sql`, `0003_precos_fluxo_ceasa.sql`, `0004_catalogo_loja.sql`, `0005_fotos_produtos.sql` e `0006_ofertas_historico.sql`.
+2. **SQL Editor** → cole e rode, nesta ordem: `supabase/migrations/0001_init.sql`, `0002_produtos_iniciais.sql`, `0003_precos_fluxo_ceasa.sql`, `0004_catalogo_loja.sql`, `0005_fotos_produtos.sql`, `0006_ofertas_historico.sql` e `0007_financeiro_analises.sql`.
 3. **Authentication → Sign In / Providers**:
    - desligue **Allow new users to sign up** (ninguém se cadastra sozinho);
    - em **Email**, desligue **Confirm email**.

@@ -7,7 +7,8 @@ import Login from "./pages/Login";
 import NovoPedido from "./pages/cliente/NovoPedido";
 import MeusPedidos from "./pages/cliente/MeusPedidos";
 import AdminPedidos from "./pages/admin/Pedidos";
-import Dashboard from "./pages/admin/Dashboard";
+import Analises from "./pages/admin/Analises";
+import Financeiro from "./pages/admin/Financeiro";
 import Clientes from "./pages/admin/Clientes";
 import Produtos from "./pages/admin/Produtos";
 import Ceasa from "./pages/admin/Ceasa";
@@ -41,7 +42,8 @@ export default function App() {
           {admin ? <>
             <Route path="/admin/pedidos" element={<AdminPedidos />} />
             <Route path="/admin/pedidos/:id" element={<AdminPedidos />} />
-            <Route path="/admin/dashboard" element={<Dashboard />} />
+            <Route path="/admin/dashboard" element={<Analises />} />
+            <Route path="/admin/financeiro" element={<Financeiro />} />
             <Route path="/admin/clientes" element={<Clientes />} />
             <Route path="/admin/produtos" element={<Produtos />} />
             <Route path="/admin/ceasa" element={<Ceasa />} />
