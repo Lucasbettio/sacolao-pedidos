@@ -6,6 +6,50 @@ import { Carregando, toast } from "../../components/ui";
 
 const precoTxt = (v: number | null) => (v != null ? Number(v).toFixed(2).replace(".", ",") : "");
 
+/** Reduz a foto para no máximo 600px (JPEG) antes de enviar. */
+async function reduzir(arquivo: File): Promise<Blob> {
+  const img = await createImageBitmap(arquivo);
+  const escala = Math.min(1, 600 / Math.max(img.width, img.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.width * escala); c.height = Math.round(img.height * escala);
+  c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+  return await new Promise<Blob>((ok, falha) => c.toBlob(b => (b ? ok(b) : falha(new Error("Não foi possível ler a imagem"))), "image/jpeg", 0.82));
+}
+const caminhoNoStorage = (url: string | null) => (url && url.includes("/produtos/") ? url.split("/produtos/").pop()!.split("?")[0] : null);
+
+function FotoProduto({ p, onMudar }: { p: Produto; onMudar: (url: string | null) => Promise<void> }) {
+  const [enviando, setEnviando] = useState(false);
+  async function enviar(arquivo?: File) {
+    if (!arquivo) return;
+    setEnviando(true);
+    try {
+      const blob = await reduzir(arquivo);
+      const caminho = `${p.id}-${Date.now()}.jpg`;
+      const { error } = await supabase.storage.from("produtos").upload(caminho, blob, { contentType: "image/jpeg", upsert: true });
+      if (error) throw error;
+      const antigo = caminhoNoStorage(p.imagem_url);
+      await onMudar(supabase.storage.from("produtos").getPublicUrl(caminho).data.publicUrl);
+      if (antigo) await supabase.storage.from("produtos").remove([antigo]);
+    } catch (e) { toast(msgErro(e)); }
+    finally { setEnviando(false); }
+  }
+  async function remover() {
+    const antigo = caminhoNoStorage(p.imagem_url);
+    await onMudar(null);
+    if (antigo) await supabase.storage.from("produtos").remove([antigo]);
+  }
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      {p.imagem_url ? <img className="thumb" src={p.imagem_url} alt="" /> : <span className="thumb vazia">sem foto</span>}
+      <label className="btn ghost sm" style={{ cursor: "pointer" }}>
+        {enviando ? "Enviando…" : p.imagem_url ? "Trocar" : "Enviar"}
+        <input type="file" accept="image/*" hidden disabled={enviando} onChange={e => { enviar(e.target.files?.[0]); e.target.value = ""; }} />
+      </label>
+      {p.imagem_url && !enviando && <button className="x" onClick={remover} aria-label={`Remover foto de ${p.nome}`}>✕</button>}
+    </span>
+  );
+}
+
 /** Campo de preço que salva ao sair do campo ou apertar Enter. */
 function CampoPreco({ p, onSalvar }: { p: Produto; onSalvar: (v: number | null) => Promise<void> }) {
   const [txt, setTxt] = useState(precoTxt(p.preco));
@@ -83,11 +127,12 @@ export default function Produtos() {
         </div>
         {semPreco > 0 && <button className="chip" aria-pressed={soSemPreco} onClick={() => setSoSemPreco(v => !v)}>Sem preço · {semPreco}</button>}
       </div>
-      <div className="card" style={{ padding: 0 }}><div className="tablewrap" style={{ margin: 0 }}><table className="t" style={{ minWidth: 760 }}>
-        <thead><tr><th style={{ paddingLeft: 16 }}>Produto</th><th>Categoria</th><th>Unidade</th><th>Preço</th><th>Também por unidade</th><th>À venda</th></tr></thead>
+      <div className="card" style={{ padding: 0 }}><div className="tablewrap" style={{ margin: 0 }}><table className="t" style={{ minWidth: 960 }}>
+        <thead><tr><th style={{ paddingLeft: 16 }}>Foto</th><th>Produto</th><th>Categoria</th><th>Unidade</th><th>Preço</th><th>Também por unidade</th><th>À venda</th></tr></thead>
         <tbody>{vis.map(p => (
           <tr key={p.id} style={p.ativo ? undefined : { opacity: .55 }}>
-            <td style={{ paddingLeft: 16 }}><b>{p.nome}</b>{p.preco_em && <div className="hint">preço de {dataCurta(p.preco_em)}</div>}</td>
+            <td style={{ paddingLeft: 16 }}><FotoProduto p={p} onMudar={url => muda(p, { imagem_url: url }, url ? "Foto salva" : "Foto removida")} /></td>
+            <td><b>{p.nome}</b>{p.preco_em && <div className="hint">preço de {dataCurta(p.preco_em)}</div>}</td>
             <td>{p.categoria}</td>
             <td><select className="unit" value={p.unidade} onChange={e => muda(p, { unidade: e.target.value as Unidade })} aria-label="Unidade">{UNIDADES.map(u => <option key={u}>{u}</option>)}</select></td>
             <td><CampoPreco p={p} onSalvar={v => muda(p, { preco: v }, v == null ? `${p.nome}: sem preço` : `${p.nome}: preço salvo`)} /></td>

@@ -34,6 +34,7 @@ export default function Layout() {
           <nav className="nav" aria-label="Menu">
             {admin ? <>
               <NavLink to="/admin/pedidos">Pedidos{novos > 0 && <span className="badge tnum">{novos}</span>}</NavLink>
+              <NavLink to="/admin/precos">Preços de hoje</NavLink>
               <NavLink to="/admin/ceasa">Lista da Ceasa</NavLink>
               <NavLink to="/admin/dashboard">Análises</NavLink>
               <NavLink to="/admin/clientes">Clientes</NavLink>

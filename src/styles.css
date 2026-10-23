@@ -208,3 +208,46 @@ table.edit tr.semp .pr input{background:var(--tomato-soft)}
   .card{border:1px solid #bbb;box-shadow:none;break-inside:avoid}
   main{padding:0}
 }
+
+/* Foto do produto */
+.prod .foto{width:48px;height:48px;border-radius:10px;object-fit:cover;flex:none;background:var(--bg)}
+.thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;background:var(--bg);border:1px solid var(--line);display:block}
+.thumb.vazia{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px}
+
+/* Folhas de impressão de pedidos (A4) — sempre claras, também no tema escuro */
+.folhas{display:flex;flex-direction:column;gap:20px}
+.folha{background:#fff;color:#1e281b;border:1px solid var(--line);border-radius:10px;padding:28px 32px;max-width:820px;width:100%;margin:0 auto;font-size:13.5px;box-shadow:var(--shadow)}
+.folha-topo{display:flex;align-items:center;gap:14px;border-bottom:2px solid #3b8733;padding-bottom:12px}
+.folha-topo img{width:58px;height:58px;object-fit:contain}
+.folha-topo span{display:block;color:#5d6955;font-size:12px}
+.folha-loja{font-family:var(--f-display);font-size:20px;letter-spacing:.06em;text-transform:uppercase}
+.folha-num{margin-left:auto;text-align:right}
+.folha-num b{font-family:var(--f-display);font-size:24px;display:block}
+.folha-dados{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:14px 0;border-bottom:1px solid #dce3d2}
+.folha-dados span{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#5d6955}
+.folha-dados b{display:block}
+.folha-dados small{display:block;color:#3b4635;overflow-wrap:anywhere}
+.folha-itens{width:100%;border-collapse:collapse;margin-top:12px}
+.folha-itens th{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#5d6955;text-align:left;border-bottom:1.5px solid #1e281b;padding:6px 6px}
+.folha-itens td{padding:7px 6px;border-bottom:1px solid #dce3d2;vertical-align:middle}
+.folha-itens .r{text-align:right}
+.folha-itens tr.falta td{color:#8a9482;text-decoration:line-through}
+.folha-itens tr.falta em{text-decoration:none;font-style:normal}
+.folha-itens .ok{width:28px;text-align:center}
+.folha-itens .caixa{display:inline-block;width:14px;height:14px;border:1.5px solid #1e281b;border-radius:3px}
+.folha-itens .linha-escrever{min-width:110px;border-bottom:1px solid #1e281b}
+.folha-totais{display:grid;grid-template-columns:auto 130px;gap:4px 18px;justify-content:end;margin-top:12px;text-align:right}
+.folha-totais b{font-family:var(--f-display);font-size:18px;border-top:1.5px solid #1e281b;padding-top:4px}
+.folha-obs{margin-top:12px;padding:10px 12px;background:#f5f7ef;border-radius:8px}
+.folha-obs p{margin:2px 0}
+.folha-rodape{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:34px}
+.folha-rodape .assina{border-top:1px solid #1e281b;padding-top:4px;font-size:11.5px;color:#5d6955}
+.folha-rodape small{grid-column:1/-1;color:#8a9482;font-size:11px}
+@media (max-width:640px){.folha{padding:18px}.folha-dados{grid-template-columns:minmax(0,1fr)}}
+@media print{
+  @page{size:A4;margin:12mm}
+  .folhas{gap:0}
+  .folha{border:0;border-radius:0;box-shadow:none;padding:0;max-width:none;break-after:page}
+  .folha:last-child{break-after:auto}
+  .folha-obs{background:none;border:1px solid #bbb}
+}

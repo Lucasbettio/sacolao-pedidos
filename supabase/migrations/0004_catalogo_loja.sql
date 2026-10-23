@@ -1,0 +1,191 @@
+-- =====================================================================
+-- Sacolão da Chácara · Catálogo real (vindo do Hortti), preços em lote e fotos
+-- Rode no SQL Editor do Supabase depois de 0001, 0002 e 0003.
+-- =====================================================================
+
+-- Foto do produto (URL pública no Storage do Supabase)
+alter table public.produtos add column if not exists imagem_url text;
+
+-- 1. Catálogo com os preços da loja (154 produtos)
+insert into public.produtos (nome, categoria, unidade, preco, ordem) values
+  ('Abacate','Frutas','kg',5.89,10),
+  ('Abacaxi Perola Graúdo','Frutas','un',9.90,20),
+  ('Ameixa importada','Frutas','kg',27.90,30),
+  ('Atemoia','Frutas','kg',39.90,40),
+  ('Banana Caturra Padrão','Frutas','kg',4.49,50),
+  ('Banana Prata Padrão','Frutas','kg',6.99,60),
+  ('Bergamota Montenegrina','Frutas','kg',5.99,70),
+  ('Carambola','Frutas','kg',18.90,80),
+  ('Côco Seco','Frutas','kg',11.90,90),
+  ('Framboesa fresca 100g','Frutas','un',29.90,100),
+  ('Goiaba Vermelha','Frutas','kg',16.90,110),
+  ('Kiwi Importado','Frutas','kg',29.90,120),
+  ('Laranja do Céu','Frutas','kg',3.99,130),
+  ('Laranja Suco Media','Frutas','kg',2.79,140),
+  ('Laranja Umbigo','Frutas','kg',5.99,150),
+  ('Laranja Umbigo Vermelha','Frutas','kg',6.99,160),
+  ('Limão Siciliano','Frutas','kg',14.90,170),
+  ('Limão Taiti','Frutas','kg',12.90,180),
+  ('Maçã Argentina','Frutas','kg',15.90,190),
+  ('Maçã Fuji','Frutas','kg',6.99,200),
+  ('Maçã Gala','Frutas','kg',7.99,210),
+  ('Maçã média','Frutas','kg',5.50,220),
+  ('Maçã Verde','Frutas','kg',19.90,230),
+  ('Mamão Formosa','Frutas','kg',10.90,240),
+  ('Mamão Papaia','Frutas','kg',13.90,250),
+  ('Manga Tommy','Frutas','kg',5.99,260),
+  ('Maracujá Azedo','Frutas','kg',14.90,270),
+  ('Melancia inteira','Frutas','kg',3.79,280),
+  ('Melancia Pedaço','Frutas','kg',4.99,290),
+  ('Melão Amarelo Espanhol','Frutas','kg',7.99,300),
+  ('Melão orange','Frutas','kg',15.90,310),
+  ('Mirtilo importado 125g','Frutas','un',29.90,320),
+  ('Mirtilo importado cx 12x125g','Frutas','un',350.00,330),
+  ('Morango 250g','Frutas','un',13.90,340),
+  ('Nectarina importada','Frutas','kg',27.90,350),
+  ('Pera Argentina','Frutas','kg',11.90,360),
+  ('Pera Nacional','Frutas','kg',7.99,370),
+  ('Pêssego nacional','Frutas','kg',9.90,380),
+  ('Physalis 100g','Frutas','un',24.90,390),
+  ('Pitaia rosa','Frutas','kg',19.90,400),
+  ('Romã','Frutas','un',20.00,410),
+  ('Uva itália','Frutas','kg',19.90,420),
+  ('Uva Niagara Rosa','Frutas','kg',24.90,430),
+  ('Uva Rubi','Frutas','kg',19.90,440),
+  ('Acelga (Couve Chinesa)','Verduras','un',7.59,450),
+  ('Agrião Verde','Verduras','un',2.99,460),
+  ('Alface Americana','Verduras','un',3.99,470),
+  ('Alface Crespa Roxa','Verduras','un',2.29,480),
+  ('Alface Crespa Verde','Verduras','un',2.29,490),
+  ('Alface Lisa','Verduras','un',2.29,500),
+  ('Alho Poro','Verduras','un',4.99,510),
+  ('Brócolis Híbrido','Verduras','un',3.49,520),
+  ('Chicória Verde','Verduras','un',5.99,530),
+  ('Couve Flor','Verduras','un',4.99,540),
+  ('Couve Verde','Verduras','un',3.99,550),
+  ('Espinafre','Verduras','un',3.99,560),
+  ('Mostarda','Verduras','un',4.99,570),
+  ('Radite Verde','Verduras','un',3.49,580),
+  ('Repolho Roxo','Verduras','un',7.49,590),
+  ('Repolho Verde','Verduras','un',5.99,600),
+  ('Rúcula','Verduras','un',3.49,610),
+  ('Salsão (aipo)','Verduras','un',12.90,620),
+  ('Abobora Pescoco','Legumes','kg',5.99,630),
+  ('Abobrinha Italia','Legumes','kg',5.99,640),
+  ('Aipim','Legumes','kg',2.99,650),
+  ('Alcachofra','Legumes','un',9.90,660),
+  ('Aspargos verdes maço','Legumes','molho',44.90,670),
+  ('Batata Doce Rosa','Legumes','kg',4.99,680),
+  ('Batata Inglesa Branca','Legumes','kg',5.99,690),
+  ('Batata Inglesa Branca Média','Legumes','kg',4.29,700),
+  ('Batata Inglesa Rosa','Legumes','kg',4.29,710),
+  ('Berinjela','Legumes','kg',10.90,720),
+  ('Beterraba','Legumes','kg',3.79,730),
+  ('Beterraba molho','Legumes','molho',6.99,740),
+  ('Broto de Alfafa 500g','Legumes','un',29.90,750),
+  ('Cebola Branca Extra','Legumes','kg',8.99,760),
+  ('Cebola Branca Média','Legumes','kg',7.39,770),
+  ('Cebola Conserva','Legumes','kg',5.99,780),
+  ('Cebola Roxa','Legumes','kg',11.39,790),
+  ('Cenoura','Legumes','kg',5.79,800),
+  ('Cenoura molho','Legumes','molho',5.99,810),
+  ('Chuchu','Legumes','kg',3.99,820),
+  ('Cogumelo Paris 300g','Legumes','un',16.90,830),
+  ('Cogumelo Porto Belo 300g','Legumes','un',16.90,840),
+  ('Cogumelo Shimeji 200g','Legumes','un',16.90,850),
+  ('Ervilha torta 200g','Legumes','un',7.49,860),
+  ('Flor Comestivel','Legumes','un',16.00,870),
+  ('Inhame','Legumes','kg',13.90,880),
+  ('Milho Verde','Legumes','un',6.99,890),
+  ('Moranga Cabotia Higienizada 700g','Legumes','un',9.90,900),
+  ('Moranga Cabotia Inteira','Legumes','kg',3.49,910),
+  ('Moranga Vermelha','Legumes','kg',2.99,920),
+  ('Nabo molho','Legumes','molho',4.99,930),
+  ('Pepino Japonês','Legumes','kg',8.99,940),
+  ('Pepino Salada','Legumes','kg',5.79,950),
+  ('Pinhão','Legumes','kg',21.90,960),
+  ('Quiabo','Legumes','kg',29.90,970),
+  ('Rabanete Molho','Legumes','molho',5.99,980),
+  ('Sopa caseira de legumes 700g','Legumes','un',11.90,990),
+  ('Tomate Cereja 250g','Legumes','un',6.99,1000),
+  ('Tomate Coquetel em Rama','Legumes','kg',24.90,1010),
+  ('Tomate Grape 180g','Legumes','un',5.99,1020),
+  ('Tomate Holandês','Legumes','kg',18.90,1030),
+  ('Tomate Italiano','Legumes','kg',11.99,1040),
+  ('Tomate Longa Vida','Legumes','kg',14.90,1050),
+  ('Vagem Verde','Legumes','kg',31.90,1060),
+  ('Açafrão','Temperos','kg',44.59,1070),
+  ('Alecrim Maço','Temperos','molho',5.00,1080),
+  ('Alho','Temperos','kg',33.90,1090),
+  ('Coentro Maço','Temperos','molho',6.00,1100),
+  ('Gengibre','Temperos','kg',19.90,1110),
+  ('Hortelã Maço','Temperos','molho',5.00,1120),
+  ('Louro Fresco Maço','Temperos','molho',5.00,1130),
+  ('Manjericão Maço','Temperos','molho',5.00,1140),
+  ('Manjerona Maço','Temperos','molho',5.00,1150),
+  ('Pimenta cambuci','Temperos','kg',19.90,1160),
+  ('Pimenta de cheiro','Temperos','kg',69.90,1170),
+  ('Pimenta Dedo de Moça','Temperos','kg',34.90,1180),
+  ('Pimenta habanero','Temperos','kg',69.90,1190),
+  ('Pimentão Amarelo','Legumes','kg',27.90,1200),
+  ('Pimentão Verde','Legumes','kg',17.90,1210),
+  ('Pimentão Vermelho','Legumes','kg',27.90,1220),
+  ('Sálvia Maço','Temperos','molho',5.00,1230),
+  ('Tempero verde','Temperos','un',2.49,1240),
+  ('Ovo Caipiraband 20 unid','Ovos','un',22.90,1250),
+  ('Ovo de Codorna 30 unidades','Ovos','un',10.90,1260),
+  ('Ovos Brancos band 30 unid','Ovos','un',18.50,1270),
+  ('Ovos Caipiras dz','Ovos','dúzia',15.90,1280),
+  ('Amendoim Casca kg','Grãos e secos','kg',15.90,1290),
+  ('Amendoim grão kg','Grãos e secos','kg',17.90,1300),
+  ('Canjica Amarela a Granel','Grãos e secos','kg',14.99,1310),
+  ('Canjica Branca a Granel','Grãos e secos','kg',14.99,1320),
+  ('Ervilha Partida','Grãos e secos','kg',16.90,1330),
+  ('Feijão Azuki','Grãos e secos','kg',22.90,1340),
+  ('Feijão Branco','Grãos e secos','kg',24.00,1350),
+  ('Feijão Fradinho','Grãos e secos','kg',23.90,1360),
+  ('Feijão Miudo','Grãos e secos','kg',23.90,1370),
+  ('Feijão Moyashi','Grãos e secos','kg',25.90,1380),
+  ('Feijão Preto','Grãos e secos','kg',10.90,1390),
+  ('Feijão Vermelho Argentino kg','Grãos e secos','kg',21.90,1400),
+  ('Grão de Bico','Grãos e secos','kg',21.90,1410),
+  ('Lentilha vermelha Canadense','Grãos e secos','kg',33.90,1420),
+  ('Milho Pipoca a Granel','Grãos e secos','kg',14.90,1430),
+  ('Côco Ralado Congelado 1 kg','Congelados','un',47.90,1440),
+  ('Framboesa Congelada 1 kg','Congelados','un',56.90,1450),
+  ('Frutas Vermelhas Congeladas 1 kg','Congelados','un',42.90,1460),
+  ('Frutas Vermelhas Congeladas 400g','Congelados','un',32.90,1470),
+  ('Morango Congelado 1KG','Congelados','un',27.90,1480),
+  ('Morango congelado 400g','Congelados','un',21.90,1490),
+  ('Carvão Rambo 3kg','Carvão e lenha','un',16.90,1500),
+  ('Carvão Rambo 4 kg','Carvão e lenha','un',22.90,1510),
+  ('Carvão Rambo 5 Kg','Carvão e lenha','un',27.90,1520),
+  ('Carvão Rambo 8 kg','Carvão e lenha','un',43.90,1530),
+  ('Lenha de Acácia Rambo 10kg','Carvão e lenha','un',22.90,1540)
+on conflict (nome) do update
+  set categoria = excluded.categoria, unidade = excluded.unidade,
+      preco = excluded.preco, ordem = excluded.ordem, ativo = true;
+
+-- 2. Os produtos genéricos do catálogo inicial que não existem na loja saem do ar
+--    (continuam nos pedidos antigos; dá para reativar na tela Produtos)
+update public.produtos set ativo = false
+ where nome in ('Banana prata','Banana caturra','Maçã gala','Maçã fuji','Laranja de umbigo','Laranja suco','Bergamota','Limão taiti','Mamão formosa','Mamão papaya','Abacaxi','Melancia','Melão','Manga palmer','Pera','Kiwi','Abacate','Caqui','Uva','Morango','Alface crespa','Alface americana','Rúcula','Couve','Espinafre','Agrião','Radicci','Repolho verde','Brócolis','Couve-flor','Tomate','Tomate cereja','Cebola','Cebola roxa','Alho','Batata inglesa','Batata doce','Aipim','Cenoura','Beterraba','Abobrinha','Abóbora cabotiá','Pepino','Pimentão verde','Pimentão vermelho','Chuchu','Berinjela','Vagem','Tempero verde','Salsa','Cebolinha','Manjericão','Coentro','Hortelã','Gengibre','Ovos brancos','Ovos caipira','Mel')
+   and nome not in (select unnest(array['Abacate','Abacaxi Perola Graúdo','Ameixa importada','Atemoia','Banana Caturra Padrão','Banana Prata Padrão','Bergamota Montenegrina','Carambola','Côco Seco','Framboesa fresca 100g','Goiaba Vermelha','Kiwi Importado','Laranja do Céu','Laranja Suco Media','Laranja Umbigo','Laranja Umbigo Vermelha','Limão Siciliano','Limão Taiti','Maçã Argentina','Maçã Fuji','Maçã Gala','Maçã média','Maçã Verde','Mamão Formosa','Mamão Papaia','Manga Tommy','Maracujá Azedo','Melancia inteira','Melancia Pedaço','Melão Amarelo Espanhol','Melão orange','Mirtilo importado 125g','Mirtilo importado cx 12x125g','Morango 250g','Nectarina importada','Pera Argentina','Pera Nacional','Pêssego nacional','Physalis 100g','Pitaia rosa','Romã','Uva itália','Uva Niagara Rosa','Uva Rubi','Acelga (Couve Chinesa)','Agrião Verde','Alface Americana','Alface Crespa Roxa','Alface Crespa Verde','Alface Lisa','Alho Poro','Brócolis Híbrido','Chicória Verde','Couve Flor','Couve Verde','Espinafre','Mostarda','Radite Verde','Repolho Roxo','Repolho Verde','Rúcula','Salsão (aipo)','Abobora Pescoco','Abobrinha Italia','Aipim','Alcachofra','Aspargos verdes maço','Batata Doce Rosa','Batata Inglesa Branca','Batata Inglesa Branca Média','Batata Inglesa Rosa','Berinjela','Beterraba','Beterraba molho','Broto de Alfafa 500g','Cebola Branca Extra','Cebola Branca Média','Cebola Conserva','Cebola Roxa','Cenoura','Cenoura molho','Chuchu','Cogumelo Paris 300g','Cogumelo Porto Belo 300g','Cogumelo Shimeji 200g','Ervilha torta 200g','Flor Comestivel','Inhame','Milho Verde','Moranga Cabotia Higienizada 700g','Moranga Cabotia Inteira','Moranga Vermelha','Nabo molho','Pepino Japonês','Pepino Salada','Pinhão','Quiabo','Rabanete Molho','Sopa caseira de legumes 700g','Tomate Cereja 250g','Tomate Coquetel em Rama','Tomate Grape 180g','Tomate Holandês','Tomate Italiano','Tomate Longa Vida','Vagem Verde','Açafrão','Alecrim Maço','Alho','Coentro Maço','Gengibre','Hortelã Maço','Louro Fresco Maço','Manjericão Maço','Manjerona Maço','Pimenta cambuci','Pimenta de cheiro','Pimenta Dedo de Moça','Pimenta habanero','Pimentão Amarelo','Pimentão Verde','Pimentão Vermelho','Sálvia Maço','Tempero verde','Ovo Caipiraband 20 unid','Ovo de Codorna 30 unidades','Ovos Brancos band 30 unid','Ovos Caipiras dz','Amendoim Casca kg','Amendoim grão kg','Canjica Amarela a Granel','Canjica Branca a Granel','Ervilha Partida','Feijão Azuki','Feijão Branco','Feijão Fradinho','Feijão Miudo','Feijão Moyashi','Feijão Preto','Feijão Vermelho Argentino kg','Grão de Bico','Lentilha vermelha Canadense','Milho Pipoca a Granel','Côco Ralado Congelado 1 kg','Framboesa Congelada 1 kg','Frutas Vermelhas Congeladas 1 kg','Frutas Vermelhas Congeladas 400g','Morango Congelado 1KG','Morango congelado 400g','Carvão Rambo 3kg','Carvão Rambo 4 kg','Carvão Rambo 5 Kg','Carvão Rambo 8 kg','Lenha de Acácia Rambo 10kg']));
+
+-- 3. Atualização de preços em lote (tela "Preços de hoje")
+--    p_itens: [{"id": 1, "preco": 5.89}, ...]  (preco null = sem preço)
+create or replace function public.atualizar_precos(p_itens jsonb)
+returns integer language plpgsql security definer set search_path = public as $$
+declare n integer;
+begin
+  if not public.is_admin() then raise exception 'Acesso restrito'; end if;
+  update public.produtos pr
+     set preco = x.preco
+    from jsonb_to_recordset(p_itens) as x(id bigint, preco numeric)
+   where pr.id = x.id and (x.preco is null or x.preco >= 0)
+     and pr.preco is distinct from x.preco;
+  get diagnostics n = row_count;
+  return n;
+end $$;
+revoke execute on function public.atualizar_precos(jsonb) from anon, public;
+grant execute on function public.atualizar_precos(jsonb) to authenticated;

@@ -5,6 +5,7 @@ import { useAuth } from "../../lib/auth";
 import { brl, hojeISO, dataCurta, qtd, slug } from "../../lib/format";
 import type { Cliente, Produto, Unidade } from "../../lib/types";
 import { Carregando, toast } from "../../components/ui";
+import ColarLista, { type ItemColado } from "../../components/ColarLista";
 
 export interface ItemCarrinho { produto_id: number | null; nome: string; quantidade: number; unidade: Unidade }
 const chaveCarrinho = (cid: string) => `sacolao_carrinho_${cid}`;
@@ -38,6 +39,7 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
   const [busca, setBusca] = useState("");
   const [extra, setExtra] = useState("");
   const [aberto, setAberto] = useState(false);
+  const [colar, setColar] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -78,6 +80,21 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
     return { ...c, [p.id]: { ...atual, unidade: u, quantidade: Math.max(1, Math.round(atual.quantidade)) } };
   });
   const remove = (k: string) => setCarrinho(c => { const n = { ...c }; delete n[k]; return n; });
+  const adicionarColados = (novos: ItemColado[]) => {
+    setCarrinho(c => {
+      const n = { ...c };
+      novos.forEach((i, ix) => {
+        const k = i.produto_id != null ? String(i.produto_id) : `x${Date.now()}${ix}`;
+        const atual = n[k];
+        n[k] = atual && atual.unidade === i.unidade
+          ? { ...atual, quantidade: Math.round((atual.quantidade + i.quantidade) * 1000) / 1000 }
+          : { produto_id: i.produto_id, nome: i.nome, quantidade: i.quantidade, unidade: i.unidade };
+      });
+      return n;
+    });
+    setColar(false);
+    toast(`${novos.length} ${novos.length === 1 ? "item adicionado" : "itens adicionados"} à sua lista`);
+  };
   const addExtra = () => {
     const t = extra.trim(); if (!t) return;
     setCarrinho(c => ({ ...c, ["x" + Date.now()]: { produto_id: null, nome: t, quantidade: 1, unidade: "un" } }));
@@ -154,7 +171,9 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
     <>
       {previa && <div className="endbox" style={{ marginBottom: 14, background: "var(--amber-soft)", color: "var(--ink)" }}>
         <b>Prévia do cliente.</b> É assim que os clientes veem o catálogo, com os preços atuais. Dá para montar uma lista de teste, mas nada é enviado daqui.</div>}
-      <div className="ptitle"><h1>{previa ? "Visão do cliente" : "Fazer pedido"}</h1></div>
+      <div className="ptitle"><h1>{previa ? "Visão do cliente" : "Fazer pedido"}</h1><span className="sp" />
+        <button className="btn sm" onClick={() => setColar(true)}>Colar minha lista</button></div>
+      {colar && <ColarLista produtos={produtos} onAdicionar={adicionarColados} onClose={() => setColar(false)} />}
       <div className="shop">
         <div>
           <div className="toolbar">
@@ -176,6 +195,7 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
                   const unidades: Unidade[] = p.aceita_unidade ? [p.unidade, "un"] : [p.unidade];
                   return (
                     <div className={`prod ${it ? "on" : ""}`} key={p.id}>
+                      {p.imagem_url && <img className="foto" src={p.imagem_url} alt="" loading="lazy" />}
                       <div className="nm"><b>{p.nome}</b><span className="tnum">{p.preco != null ? <><b style={{ display: "inline", color: "var(--ink)" }}>{brl(p.preco)}</b>/{p.unidade}</> : "preço a confirmar"}{p.aceita_unidade ? " · também por unidade" : ""}</span></div>
                       {it && unidades.length > 1 && <select className="unit" value={it.unidade} onChange={e => trocaUnidade(p, e.target.value as Unidade)} aria-label="Unidade">
                         {unidades.map(u => <option key={u}>{u}</option>)}</select>}

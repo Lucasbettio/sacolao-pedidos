@@ -11,6 +11,8 @@ import Dashboard from "./pages/admin/Dashboard";
 import Clientes from "./pages/admin/Clientes";
 import Produtos from "./pages/admin/Produtos";
 import Ceasa from "./pages/admin/Ceasa";
+import Precos from "./pages/admin/Precos";
+import Impressao from "./pages/admin/Impressao";
 
 export default function App() {
   const { perfil, sair } = useAuth();
@@ -43,6 +45,8 @@ export default function App() {
             <Route path="/admin/clientes" element={<Clientes />} />
             <Route path="/admin/produtos" element={<Produtos />} />
             <Route path="/admin/ceasa" element={<Ceasa />} />
+            <Route path="/admin/precos" element={<Precos />} />
+            <Route path="/admin/imprimir" element={<Impressao />} />
             <Route path="/admin/visao-cliente" element={<NovoPedido previa />} />
             <Route path="*" element={<Navigate to="/admin/pedidos" replace />} />
           </> : <>

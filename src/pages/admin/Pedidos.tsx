@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { exportarPedidosCSV, prepararImpressao } from "../../lib/exportar";
 import { supabase, msgErro } from "../../lib/supabase";
 import { brl, dataCurta, dataHora, hojeISO, num, qtd, slug, waLink } from "../../lib/format";
 import { ACAO_PROXIMO, FLUXO, STATUS_INFO, STATUS_USADOS, UNIDADES, type Evento, type Item, type PedidoResumo, type Produto, type Status, type Unidade } from "../../lib/types";
@@ -16,7 +17,9 @@ const FILTROS: [string, string, (p: PedidoResumo) => boolean][] = [
 
 export default function AdminPedidos() {
   const { id } = useParams();
+  const nav = useNavigate();
   const [lista, setLista] = useState<PedidoResumo[] | null>(null);
+  const [exportando, setExportando] = useState(false);
   const [filtro, setFiltro] = useState("novos");
   const [busca, setBusca] = useState("");
 
@@ -51,7 +54,16 @@ export default function AdminPedidos() {
 
   return (
     <>
-      <div className="ptitle"><h1>Pedidos</h1></div>
+      <div className="ptitle"><h1>Pedidos</h1><span className="sp" />
+        <button className="btn ghost sm" disabled={!visiveis.length} onClick={() => { prepararImpressao(visiveis.map(p => p.id)); nav("/admin/imprimir"); }}>
+          Imprimir {visiveis.length} {visiveis.length === 1 ? "pedido" : "pedidos"}</button>
+        <button className="btn ghost sm" disabled={!visiveis.length || exportando} onClick={async () => {
+          setExportando(true);
+          try { await exportarPedidosCSV(visiveis, `pedidos-${hojeISO()}.csv`); } catch (e) { toast(msgErro(e)); }
+          setExportando(false);
+        }}>{exportando ? "Exportando…" : "Exportar planilha"}</button>
+      </div>
+      <p className="hint" style={{ marginTop: -8 }}>Imprimir e exportar usam os pedidos do filtro e da busca abaixo.</p>
       <div className="split">
         <div>
           <div className="search" style={{ marginBottom: 10 }}>
@@ -207,6 +219,7 @@ function Editor({ p }: { p: PedidoResumo }) {
         <span className="sp" />
         {p.cliente_telefone && <a className="btn ghost sm" href={waLink(p.cliente_telefone, resumoWhats())} target="_blank" rel="noopener">WhatsApp do cliente</a>}
         <button className="btn ghost sm" onClick={() => copiar(resumoWhats())}>Copiar resumo</button>
+        <Link className="btn ghost sm" to={`/admin/imprimir?ids=${p.id}`} onClick={e => { if (sujo) { e.preventDefault(); toast("Salve as alterações antes de imprimir"); } }}>Imprimir</Link>
       </div>
 
       <details style={{ marginTop: 16 }}>
