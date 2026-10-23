@@ -10,11 +10,29 @@ import { porNome } from "../../components/Ordenacao";
 
 export interface ItemCarrinho { produto_id: number | null; nome: string; quantidade: number; unidade: Unidade }
 const chaveCarrinho = (cid: string) => `sacolao_carrinho_${cid}`;
+/** Guarda a lista ainda não enviada neste aparelho, com o dia em que foi mexida. Lista vazia apaga. */
 export function salvarCarrinho(cid: string, itens: Record<string, ItemCarrinho>) {
-  try { localStorage.setItem(chaveCarrinho(cid), JSON.stringify(itens)); } catch { /* sem armazenamento */ }
+  try {
+    if (!Object.keys(itens).length) localStorage.removeItem(chaveCarrinho(cid));
+    else localStorage.setItem(chaveCarrinho(cid), JSON.stringify({ dia: hojeISO(), itens }));
+  } catch { /* sem armazenamento */ }
 }
-function lerCarrinho(cid: string): Record<string, ItemCarrinho> {
-  try { return JSON.parse(localStorage.getItem(chaveCarrinho(cid)) || "{}"); } catch { return {}; }
+interface Rascunho { dia: string | null; itens: Record<string, ItemCarrinho> }
+function lerCarrinho(cid: string): Rascunho {
+  try {
+    const v = JSON.parse(localStorage.getItem(chaveCarrinho(cid)) || "null");
+    if (!v) return { dia: null, itens: {} };
+    if (v.itens) return { dia: v.dia ?? null, itens: v.itens };
+    return { dia: null, itens: v };              // formato antigo (sem data)
+  } catch { return { dia: null, itens: {} }; }
+}
+/** Lista salva de outro dia: pergunta antes de continuar. Do mesmo dia: continua direto. */
+function rascunhoInicial(cid: string | undefined, previa: boolean) {
+  if (!cid || previa) return { carrinho: {}, antigo: null as Rascunho | null };
+  const r = lerCarrinho(cid);
+  if (!Object.keys(r.itens).length) return { carrinho: {}, antigo: null };
+  if (r.dia === hojeISO()) return { carrinho: r.itens, antigo: null };
+  return { carrinho: {}, antigo: r };
 }
 const passo = (u: Unidade) => (u === "kg" ? 0.5 : 1);
 
@@ -54,7 +72,10 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
   const cliente = previa ? CLIENTE_PREVIA : perfil.tipo === "cliente" ? perfil.cliente : null;
   const nav = useNavigate();
   const [produtos, setProdutos] = useState<Produto[] | null>(null);
-  const [carrinho, setCarrinho] = useState<Record<string, ItemCarrinho>>(() => (cliente ? lerCarrinho(cliente.id) : {}));
+  const [inicio] = useState(() => rascunhoInicial(cliente?.id, previa));
+  const [carrinho, setCarrinho] = useState<Record<string, ItemCarrinho>>(inicio.carrinho);
+  const [antigo, setAntigo] = useState<Rascunho | null>(inicio.antigo);
+  const [confirmaLimpar, setConfirmaLimpar] = useState(false);
   const [cat, setCat] = useState("Todos");
   const [busca, setBusca] = useState("");
   const [extra, setExtra] = useState("");
@@ -76,7 +97,8 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
     supabase.from("produtos").select("*").eq("ativo", true).order("ordem").order("nome")
       .then(({ data, error }) => { if (error) toast(msgErro(error)); setProdutos((data as Produto[]) ?? []); });
   }, []);
-  useEffect(() => { if (cliente) salvarCarrinho(cliente.id, carrinho); }, [carrinho, cliente]);
+  // Na prévia do admin nada fica guardado; com uma lista antiga esperando resposta, não sobrescreve
+  useEffect(() => { if (cliente && !previa && !antigo) salvarCarrinho(cliente.id, carrinho); }, [carrinho, cliente, previa, antigo]);
 
   const categorias = useMemo(() => [...new Set((produtos ?? []).map(p => p.categoria))], [produtos]);
   const filtrados = useMemo(() => {
@@ -144,7 +166,8 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
     });
     setEnviando(false);
     if (error) { setErro(msgErro(error)); return; }
-    setCarrinho({}); setObs(""); setAberto(false);
+    if (cliente) salvarCarrinho(cliente.id, {});          // zera já, antes de sair da tela
+    setCarrinho({}); setObs(""); setAberto(false); setDia(dias[1]); setTurno("manhã"); setSubst(true); setOutroEnd(false); setEndereco("");
     toast(`Pedido nº ${data} enviado`);
     nav("/meus-pedidos");
   }
@@ -152,6 +175,11 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
   const sacola = (
     <aside className={`sacola ${aberto ? "open" : ""}`} aria-label="Seu pedido">
       <header><h2>Seu pedido</h2><span className="hint tnum">{itens.length ? `${itens.length} ${itens.length === 1 ? "item" : "itens"}` : ""}</span><span className="sp" />
+        {itens.length > 0 && (confirmaLimpar
+          ? <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><span className="hint">Tirar {itens.length === 1 ? "o item" : `os ${itens.length} itens`}?</span>
+              <button className="btn red sm" onClick={() => { setCarrinho({}); setConfirmaLimpar(false); toast("Lista limpa"); }}>Limpar</button>
+              <button className="btn ghost sm" onClick={() => setConfirmaLimpar(false)}>Não</button></span>
+          : <button className="btn ghost sm" onClick={() => setConfirmaLimpar(true)}>Limpar lista</button>)}
         {aberto && <button className="x" onClick={() => setAberto(false)} aria-label="Fechar">✕</button>}</header>
       <div className="body">
         {itens.length ? <ul className="cart">{itens.map(([k, i]) => (
@@ -196,6 +224,16 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
         <b>Prévia do cliente.</b> É assim que os clientes veem o catálogo, com os preços atuais. Dá para montar uma lista de teste, mas nada é enviado daqui.</div>}
       <div className="ptitle"><h1>{previa ? "Visão do cliente" : "Fazer pedido"}</h1><span className="sp" />
         <button className="btn sm" onClick={() => setColar(true)}>Colar minha lista</button></div>
+      {antigo && (() => {
+        const n = Object.keys(antigo.itens).length;
+        const quando = antigo.dia === hojeISO(-1) ? "de ontem" : antigo.dia ? `de ${dataCurta(antigo.dia)}` : "não enviada";
+        return (
+          <div className="endbox" style={{ marginBottom: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", background: "var(--amber-soft)", color: "var(--ink)" }}>
+            <span style={{ flex: "1 1 240px" }}>Você tem uma lista {quando} com <b>{n} {n === 1 ? "item" : "itens"}</b> que não foi enviada.</span>
+            <button className="btn sm" onClick={() => { setCarrinho(antigo.itens); setAntigo(null); }}>Continuar essa lista</button>
+            <button className="btn ghost sm" onClick={() => { if (cliente) salvarCarrinho(cliente.id, {}); setAntigo(null); }}>Começar do zero</button>
+          </div>);
+      })()}
       {colar && <ColarLista produtos={produtos} onAdicionar={adicionarColados} onClose={() => setColar(false)} />}
       <div className="shop">
         <div>
