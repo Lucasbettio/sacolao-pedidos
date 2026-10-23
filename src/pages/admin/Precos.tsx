@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, msgErro } from "../../lib/supabase";
-import { brl, num, slug } from "../../lib/format";
+import { brl, dataCurta, emOferta, hojeISO, num, slug } from "../../lib/format";
 import { casar, escolhaClara, lerPreco } from "../../lib/lista";
 import { UNIDADES, type Produto, type Unidade } from "../../lib/types";
 import { Carregando, toast } from "../../components/ui";
@@ -21,6 +21,7 @@ export default function Precos() {
   const [edits, setEdits] = useState<Record<number, string>>({});
   const [busca, setBusca] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [novaOferta, setNovaOferta] = useState({ nome: "", preco: "", ate: hojeISO() });
 
   const carregar = useCallback(async () => {
     const { data, error } = await supabase.from("produtos").select("*").order("ordem").order("nome");
@@ -73,6 +74,22 @@ export default function Precos() {
       setLinhas(null); setTexto(""); carregar();
     } catch (e) { toast(msgErro(e)); }
     finally { setSalvando(false); }
+  }
+
+  // ---------- Ofertas ----------
+  const comOferta = (produtos ?? []).filter(p => p.preco_oferta != null).sort((a, b) => (a.oferta_ate ?? "9").localeCompare(b.oferta_ate ?? "9"));
+  async function salvarOferta(p: Produto, preco: number | null, ate: string | null) {
+    const { error } = await supabase.from("produtos").update({ preco_oferta: preco, oferta_ate: ate }).eq("id", p.id);
+    if (error) { toast(msgErro(error)); return false; }
+    toast(preco == null ? `Oferta de ${p.nome} encerrada` : `Oferta de ${p.nome} criada`); carregar(); return true;
+  }
+  async function criarOferta() {
+    const p = ativos.find(x => x.nome === novaOferta.nome);
+    const v = num(novaOferta.preco);
+    if (!p) { toast("Escolha um produto da lista"); return; }
+    if (isNaN(v) || v <= 0) { toast("Informe o preço da oferta"); return; }
+    if (p.preco != null && v >= Number(p.preco)) { toast("O preço da oferta precisa ser menor que o preço normal"); return; }
+    if (await salvarOferta(p, Math.round(v * 100) / 100, novaOferta.ate || null)) setNovaOferta({ nome: "", preco: "", ate: hojeISO() });
   }
 
   // ---------- Edição rápida ----------
@@ -138,6 +155,32 @@ export default function Precos() {
             <button className="btn ghost" onClick={() => setLinhas(null)}>Voltar ao texto</button>
           </div>
         </>}
+      </div>
+
+      <div className="card" style={{ marginBottom: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div><h2 style={{ fontSize: 18 }}>Ofertas do dia</h2>
+          <p className="hint" style={{ margin: "4px 0 0" }}>A oferta aparece em destaque no topo do catálogo, com o preço normal riscado, e vale até o fim do dia escolhido. Bom para girar produto parado.</p></div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end" }}>
+          <label className="field" style={{ flex: "2 1 220px" }}><span>Produto</span>
+            <input className="inp" id="oferta-produto" list="lista-ofertas" value={novaOferta.nome} onChange={e => setNovaOferta(o => ({ ...o, nome: e.target.value }))} placeholder="Comece a digitar…" /></label>
+          <datalist id="lista-ofertas">{ativos.map(p => <option key={p.id} value={p.nome}>{p.preco != null ? `${brl(p.preco)}/${p.unidade}` : ""}</option>)}</datalist>
+          <label className="field" style={{ flex: "0 1 120px" }}><span>Preço oferta</span>
+            <input className="inp tnum" id="oferta-preco" inputMode="decimal" placeholder="R$" value={novaOferta.preco} onChange={e => setNovaOferta(o => ({ ...o, preco: e.target.value }))} /></label>
+          <label className="field" style={{ flex: "0 1 160px" }}><span>Vale até</span>
+            <input className="inp" id="oferta-ate" type="date" min={hojeISO()} value={novaOferta.ate} onChange={e => setNovaOferta(o => ({ ...o, ate: e.target.value }))} /></label>
+          <button className="btn" onClick={criarOferta}>Criar oferta</button>
+        </div>
+        {comOferta.length > 0 && <div className="tablewrap" style={{ margin: 0 }}><table className="t" style={{ minWidth: 520 }}>
+          <thead><tr><th>Produto</th><th className="r">Normal</th><th className="r">Oferta</th><th>Vale até</th><th /></tr></thead>
+          <tbody>{comOferta.map(p => (
+            <tr key={p.id} style={emOferta(p) ? undefined : { opacity: .55 }}>
+              <td><b>{p.nome}</b>{!emOferta(p) && <span className="hint"> · vencida</span>}</td>
+              <td className="r tnum"><s className="muted">{p.preco != null ? brl(p.preco) : "—"}</s></td>
+              <td className="r tnum"><b style={{ color: "var(--tomato-ink)" }}>{brl(p.preco_oferta)}</b><span className="hint">/{p.unidade}</span></td>
+              <td>{p.oferta_ate ? dataCurta(p.oferta_ate) : "sem data"}</td>
+              <td style={{ textAlign: "right" }}><button className="btn ghost sm" onClick={() => salvarOferta(p, null, null)}>{emOferta(p) ? "Encerrar" : "Remover"}</button></td>
+            </tr>))}</tbody>
+        </table></div>}
       </div>
 
       <div className="card" style={{ padding: 0 }}>

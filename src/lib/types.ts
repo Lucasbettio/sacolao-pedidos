@@ -28,7 +28,7 @@ export interface Cliente {
 export interface Produto {
   id: number; nome: string; categoria: string; unidade: Unidade; aceita_unidade: boolean;
   ativo: boolean; ordem: number; preco: number | null; ultimo_preco: number | null; preco_em: string | null;
-  imagem_url: string | null;
+  imagem_url: string | null; preco_oferta: number | null; oferta_ate: string | null;
 }
 export interface PedidoResumo {
   id: string; numero: number; cliente_id: string; status: Status; entrega_data: string;

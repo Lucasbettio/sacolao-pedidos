@@ -251,3 +251,17 @@ table.edit tr.semp .pr input{background:var(--tomato-soft)}
   .folha:last-child{break-after:auto}
   .folha-obs{background:none;border:1px solid #bbb}
 }
+
+/* Ofertas do dia no catálogo */
+.banca.ofertas{background:var(--tomato-soft);border-radius:16px;padding:10px 14px 4px;margin-top:16px}
+.banca.ofertas h2{color:var(--tomato-ink)}
+.banca.ofertas h2::after{background:color-mix(in srgb,var(--tomato) 30%,transparent)}
+.banca.ofertas .prod{border-bottom-color:color-mix(in srgb,var(--tomato) 25%,transparent)}
+.prod s{color:var(--muted)}
+
+/* Conferência ✓/✗ por item no preparo */
+.conf{width:32px;height:32px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);font-weight:700;font-size:15px;margin:0 2px;color:var(--muted);line-height:1}
+.conf.ok:hover,.conf.ok.on{border-color:var(--green);color:var(--green-ink)}
+.conf.ok.on{background:var(--green-soft)}
+.conf.no:hover,.conf.no.on{border-color:var(--tomato);color:var(--tomato-ink)}
+.conf.no.on{background:var(--tomato-soft)}

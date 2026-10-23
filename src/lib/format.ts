@@ -39,5 +39,14 @@ export function waLink(telefone: string | null | undefined, texto = "") {
   return `https://wa.me/${n}${texto ? "?text=" + encodeURIComponent(texto) : ""}`;
 }
 
+/** Oferta valendo hoje (até a data, inclusive, no horário de Porto Alegre). */
+export function emOferta(p: { preco_oferta: number | null; oferta_ate: string | null }) {
+  return p.preco_oferta != null && (!p.oferta_ate || p.oferta_ate >= hojeISO());
+}
+/** Preço que vale hoje: oferta ou preço normal. */
+export function precoVigente(p: { preco: number | null; preco_oferta: number | null; oferta_ate: string | null }) {
+  return emOferta(p) ? Number(p.preco_oferta) : p.preco != null ? Number(p.preco) : null;
+}
+
 export const slug = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();

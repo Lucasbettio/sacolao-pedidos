@@ -175,8 +175,15 @@ function Editor({ p }: { p: PedidoResumo }) {
         {p.observacoes && <div><span className="lbl">Observações do cliente</span><br />{p.observacoes}</div>}
       </div>
 
+      {(p.status === "recebido" || p.status === "preparando") && linhas.length > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+          <span className="hint tnum">{linhas.filter(l => l.em_falta || l.quantidade_final != null).length} de {linhas.length} itens conferidos</span>
+          <span className="sp" />
+          <button className="btn ghost sm" onClick={() => { setLinhas(ls => ls!.map(l => (l.em_falta || l.quantidade_final != null ? l : { ...l, quantidade_final: l.quantidade, sepTxt: qtd(l.quantidade) }))); setSujo(true); }}>
+            Marcar o resto como separado</button>
+        </div>)}
       <div className="tablewrap"><table className="t edit">
-        <thead><tr><th>Produto</th><th className="r">Pedido</th><th style={{ width: 96 }}>Unid.</th><th style={{ width: 96 }} className="r">Separado</th><th style={{ width: 110 }} className="r">Preço/unid.</th><th className="r">Subtotal</th><th>Falta</th><th /></tr></thead>
+        <thead><tr><th>Produto</th><th className="r">Pedido</th><th style={{ width: 96 }}>Unid.</th><th style={{ width: 96 }} className="r">Separado</th><th style={{ width: 110 }} className="r">Preço/unid.</th><th className="r">Subtotal</th><th style={{ textAlign: "center" }}>Conferência</th><th /></tr></thead>
         <tbody>{linhas.map((l, ix) => {
           const q = Number(l.quantidade_final ?? l.quantidade);
           return (
@@ -193,7 +200,12 @@ function Editor({ p }: { p: PedidoResumo }) {
               <td className="pr"><input className="tnum" style={{ textAlign: "right" }} placeholder="R$" value={l.precoTxt}
                 onChange={e => { const v = num(e.target.value); edita(ix, { precoTxt: e.target.value, preco_unitario: isNaN(v) ? null : Math.round(v * 100) / 100 }); }} aria-label="Preço por unidade" inputMode="decimal" /></td>
               <td className="r tnum">{l.em_falta || l.preco_unitario == null ? "—" : brl(q * Number(l.preco_unitario))}</td>
-              <td style={{ textAlign: "center" }}><input type="checkbox" style={{ width: "auto" }} checked={l.em_falta} onChange={e => edita(ix, { em_falta: e.target.checked })} aria-label="Em falta" /></td>
+              <td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                <button className={`conf ok ${!l.em_falta && l.quantidade_final != null ? "on" : ""}`} title="Separado" aria-label={`${l.nome} separado`}
+                  onClick={() => edita(ix, { em_falta: false, quantidade_final: l.quantidade_final ?? l.quantidade, sepTxt: l.sepTxt || qtd(l.quantidade) })}>✓</button>
+                <button className={`conf no ${l.em_falta ? "on" : ""}`} title="Em falta" aria-label={`${l.nome} em falta`}
+                  onClick={() => edita(ix, { em_falta: !l.em_falta })}>✗</button>
+              </td>
               <td><button className="x" aria-label="Remover item" onClick={() => { if (l.id) setRemovidos(r => [...r, l.id!]); setLinhas(ls => ls!.filter((_, i) => i !== ix)); setSujo(true); }}>✕</button></td>
             </tr>);
         })}</tbody>
@@ -208,7 +220,7 @@ function Editor({ p }: { p: PedidoResumo }) {
         <span className="lbl">Total</span><span className="grand">{brl(total)}</span>
       </div>
       {semPreco > 0 && <p className="hint" style={{ textAlign: "right", margin: "4px 0 0" }}>{semPreco} {semPreco === 1 ? "item sem preço (fora do catálogo ou pedido por unidade)" : "itens sem preço (fora do catálogo ou pedidos por unidade)"}</p>}
-      {p.status === "preparando" && <p className="hint" style={{ margin: "8px 0 0" }}>Em preparo: preencha a coluna <b>Separado</b> com o peso real e marque <b>Falta</b> no que não tiver. O cliente vê o valor atualizado.</p>}
+      {p.status === "preparando" && <p className="hint" style={{ margin: "8px 0 0" }}>Em preparo: toque em <b>✓</b> no que foi separado (ajuste o peso em <b>Separado</b> se mudou) e em <b>✗</b> no que faltou. O cliente vê o valor atualizado ao salvar.</p>}
 
       <label className="field" style={{ marginTop: 14 }}><span>Recado para o cliente (aparece no pedido dele)</span>
         <input className="inp" id="nota" value={nota} onChange={e => { setNota(e.target.value); setSujo(true); }} placeholder="Ex.: trocamos a rúcula por agrião" /></label>

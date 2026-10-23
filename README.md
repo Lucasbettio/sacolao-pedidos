@@ -9,6 +9,9 @@ Clientes cadastrados entram com usuário e senha, montam o pedido e enviam. A lo
 - **Visão do cliente:** prévia do catálogo como o cliente vê, sem enviar pedido.
 - **Colar lista:** o cliente cola a lista do WhatsApp ("2 kg tomate", "3 alface", "1 dz ovos") e o sistema encontra os produtos; quando há mais de um parecido, ele escolhe.
 - **Preços de hoje:** colar a tabela de preços inteira (WhatsApp, planilha) e conferir antes de salvar, ou editar rápido por categoria.
+- **Ofertas do dia:** preço promocional com data de validade, em destaque no topo do catálogo e já aplicado no pedido.
+- **Conferência no preparo:** ✓ (separado) e ✗ (em falta) em cada item, com contador e "marcar o resto como separado".
+- **Histórico de preços:** toda mudança de preço fica registrada (base para variação e comparação com a Ceasa).
 - **Fotos:** envio de foto por produto na tela Produtos (reduzida para 600px antes de subir).
 - **Impressão:** pedido com preços (para entregar, com assinatura) ou lista de separação (sem valores, para anotar peso); um pedido ou todos do filtro, um por página. **Exportar planilha** gera CSV para Excel.
 - **Análises:** faturamento por dia, ticket médio, produtos e clientes que mais compram, pedidos por dia da semana e itens que mais faltaram.
@@ -22,7 +25,7 @@ Stack: React + Vite no front, Supabase (Postgres, login e permissões por linha)
 
 ### 1. Supabase
 1. Crie uma conta em supabase.com e um projeto novo. Região **South America (São Paulo)**.
-2. **SQL Editor** → cole e rode, nesta ordem: `supabase/migrations/0001_init.sql`, `0002_produtos_iniciais.sql`, `0003_precos_fluxo_ceasa.sql`, `0004_catalogo_loja.sql` e `0005_fotos_produtos.sql`.
+2. **SQL Editor** → cole e rode, nesta ordem: `supabase/migrations/0001_init.sql`, `0002_produtos_iniciais.sql`, `0003_precos_fluxo_ceasa.sql`, `0004_catalogo_loja.sql`, `0005_fotos_produtos.sql` e `0006_ofertas_historico.sql`.
 3. **Authentication → Sign In / Providers**:
    - desligue **Allow new users to sign up** (ninguém se cadastra sozinho);
    - em **Email**, desligue **Confirm email**.

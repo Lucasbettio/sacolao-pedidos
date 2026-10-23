@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase, msgErro } from "../../lib/supabase";
 import { useAuth } from "../../lib/auth";
-import { brl, hojeISO, dataCurta, qtd, slug } from "../../lib/format";
+import { brl, hojeISO, dataCurta, emOferta, precoVigente, qtd, slug } from "../../lib/format";
 import type { Cliente, Produto, Unidade } from "../../lib/types";
 import { Carregando, toast } from "../../components/ui";
 import ColarLista, { type ItemColado } from "../../components/ColarLista";
@@ -19,7 +19,7 @@ const passo = (u: Unidade) => (u === "kg" ? 0.5 : 1);
 
 /** Preço que vale para o item: só quando a unidade pedida é a unidade de venda do produto. */
 export function precoDoItem(p: Produto | undefined, unidade: Unidade) {
-  return p && p.preco != null && p.unidade === unidade ? Number(p.preco) : null;
+  return p && p.unidade === unidade ? precoVigente(p) : null;
 }
 
 /** Cliente fictício usado na prévia do admin. */
@@ -185,18 +185,14 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
               {["Todos", ...categorias].map(c => <button key={c} className="chip" aria-pressed={c === cat} onClick={() => setCat(c)}>{c}</button>)}
             </div>
           </div>
-          {categorias.filter(c => cat === "Todos" || c === cat).map(c => {
-            const ps = filtrados.filter(p => p.categoria === c);
-            if (!ps.length) return null;
-            return (
-              <section className="banca" key={c}><h2>{c}</h2><div className="rows">
-                {ps.map(p => {
+          {(() => {
+            const linha = (p: Produto, chave: string) => {
                   const it = carrinho[String(p.id)];
                   const unidades: Unidade[] = p.aceita_unidade ? [p.unidade, "un"] : [p.unidade];
                   return (
-                    <div className={`prod ${it ? "on" : ""}`} key={p.id}>
+                    <div className={`prod ${it ? "on" : ""}`} key={chave}>
                       {p.imagem_url && <img className="foto" src={p.imagem_url} alt="" loading="lazy" />}
-                      <div className="nm"><b>{p.nome}</b><span className="tnum">{p.preco != null ? <><b style={{ display: "inline", color: "var(--ink)" }}>{brl(p.preco)}</b>/{p.unidade}</> : "preço a confirmar"}{p.aceita_unidade ? " · também por unidade" : ""}</span></div>
+                      <div className="nm"><b>{p.nome}</b><span className="tnum">{emOferta(p) ? <><s>{p.preco != null ? brl(p.preco) : ""}</s> <b style={{ display: "inline", color: "var(--tomato-ink)" }}>{brl(p.preco_oferta)}</b>/{p.unidade} <span className="pill st-recebido" style={{ fontSize: 10, padding: "1px 6px" }}>Oferta</span></> : p.preco != null ? <><b style={{ display: "inline", color: "var(--ink)" }}>{brl(p.preco)}</b>/{p.unidade}</> : "preço a confirmar"}{p.aceita_unidade ? " · também por unidade" : ""}</span></div>
                       {it && unidades.length > 1 && <select className="unit" value={it.unidade} onChange={e => trocaUnidade(p, e.target.value as Unidade)} aria-label="Unidade">
                         {unidades.map(u => <option key={u}>{u}</option>)}</select>}
                       {it ? <span className="step"><button onClick={() => altera(p, -1)} aria-label="Diminuir">−</button>
@@ -204,9 +200,20 @@ export default function NovoPedido({ previa = false }: { previa?: boolean }) {
                         <button onClick={() => altera(p, 1)} aria-label="Aumentar">+</button></span>
                         : <button className="add" onClick={() => altera(p, 1)}>Adicionar</button>}
                     </div>);
-                })}
-              </div></section>);
-          })}
+};
+            const ofertas = cat === "Todos" && !busca.trim() ? produtos.filter(p => emOferta(p)) : [];
+            return <>
+              {ofertas.length > 0 && (
+                <section className="banca ofertas"><h2>Ofertas do dia</h2><div className="rows">
+                  {ofertas.map(p => linha(p, "of" + p.id))}
+                </div></section>)}
+              {categorias.filter(c => cat === "Todos" || c === cat).map(c => {
+                const ps = filtrados.filter(p => p.categoria === c);
+                if (!ps.length) return null;
+                return <section className="banca" key={c}><h2>{c}</h2><div className="rows">{ps.map(p => linha(p, String(p.id)))}</div></section>;
+              })}
+            </>;
+          })()}
           {!filtrados.length && <p className="empty">Nenhum produto com esse nome. Peça assim mesmo em “Item fora da lista”.</p>}
         </div>
         {sacola}
