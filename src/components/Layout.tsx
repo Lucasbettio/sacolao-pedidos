@@ -1,5 +1,5 @@
-import { NavLink, Outlet, Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
 import logo from "../assets/logo.jpg";
@@ -8,6 +8,22 @@ export default function Layout() {
   const { perfil, sair } = useAuth();
   const admin = perfil.tipo === "admin";
   const [novos, setNovos] = useState(0);
+  const topo = useRef<HTMLElement>(null);
+  const { pathname } = useLocation();
+
+  // Altura real do topo fixo (muda quando o menu quebra linha), usada por cabeçalhos de tabela fixos.
+  useEffect(() => {
+    const el = topo.current; if (!el) return;
+    const medir = () => document.documentElement.style.setProperty("--top-h", `${el.offsetHeight}px`);
+    medir();
+    const ro = new ResizeObserver(medir); ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // No celular o menu rola de lado: traz a página atual para a vista.
+  useEffect(() => {
+    topo.current?.querySelector<HTMLElement>(".nav a.active")?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [pathname]);
 
   // Contador de pedidos novos no menu do admin (atualiza em tempo real)
   useEffect(() => {
@@ -25,7 +41,7 @@ export default function Layout() {
 
   return (
     <>
-      <header className="top">
+      <header className="top" ref={topo}>
         <div className="wrap">
           <Link className="brand" to="/">
             <img src={logo} alt="Sacolão da Chácara" />

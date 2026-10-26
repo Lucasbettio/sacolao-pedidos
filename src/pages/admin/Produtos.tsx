@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, msgErro } from "../../lib/supabase";
 import { dataCurta, num, slug } from "../../lib/format";
 import { UNIDADES, type Produto, type Unidade } from "../../lib/types";
-import { Carregando, Modal, toast } from "../../components/ui";
+import { Carregando, Icone, Modal, toast } from "../../components/ui";
 import { Th, useOrdenacao } from "../../components/Ordenacao";
 
 const precoTxt = (v: number | null) => (v != null ? Number(v).toFixed(2).replace(".", ",") : "");
@@ -18,58 +18,170 @@ async function reduzir(arquivo: File): Promise<Blob> {
 }
 const caminhoNoStorage = (url: string | null) => (url && url.includes("/produtos/") ? url.split("/produtos/").pop()!.split("?")[0] : null);
 
-function FotoProduto({ p, onMudar }: { p: Produto; onMudar: (url: string | null) => Promise<void> }) {
+
+type Estado = "salvando" | "salvo" | "erro";
+type Mudar = (patch: Partial<Produto>, aviso?: string, desfazivel?: boolean) => Promise<void>;
+const reais = (v: number | null) => (v == null ? "sem preço" : `R$ ${precoTxt(v)}`);
+
+/** Menu "⋯" da linha: ações raras (foto e exclusão) ficam fora do caminho do dia a dia. */
+function MenuLinha({ nome, itens }: { nome: string; itens: { rotulo: string; fn: () => void; perigo?: boolean }[] }) {
+  const [aberto, setAberto] = useState(false);
+  const caixa = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!aberto) return;
+    caixa.current?.querySelector<HTMLButtonElement>("[role=menuitem]")?.focus();
+    const fora = (e: MouseEvent) => { if (!caixa.current?.contains(e.target as Node)) setAberto(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") { setAberto(false); caixa.current?.querySelector<HTMLButtonElement>(".menu-btn")?.focus(); } };
+    document.addEventListener("mousedown", fora); document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", fora); document.removeEventListener("keydown", esc); };
+  }, [aberto]);
+  return (
+    <div className="menu-linha" ref={caixa}>
+      <button type="button" className="menu-btn" aria-haspopup="menu" aria-expanded={aberto} aria-label={`Mais opções de ${nome}`} onClick={() => setAberto(v => !v)}>
+        <Icone nome="mais" />
+      </button>
+      {aberto && (
+        <div className="menu-lista" role="menu" aria-label={`Opções de ${nome}`}>
+          {itens.map(i => (
+            <button key={i.rotulo} type="button" role="menuitem" className={i.perigo ? "perigo" : undefined} onClick={() => { setAberto(false); i.fn(); }}>{i.rotulo}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Campo de preço: salva ao sair do campo ou apertar Enter; Esc desfaz o que foi digitado.
+ * Mudança grande (mais de 50% para cima ou para baixo) pede confirmação antes de ir para o catálogo.
+ */
+function CampoPreco({ p, onSalvar }: { p: Produto; onSalvar: (v: number | null) => Promise<void> }) {
+  const atual = p.preco == null ? null : Number(p.preco);
+  const [txt, setTxt] = useState(precoTxt(atual));
+  const [pendente, setPendente] = useState<{ v: number } | null>(null);
+  const campo = useRef<HTMLInputElement>(null);
+  const cancelado = useRef(false);
+  useEffect(() => { setTxt(precoTxt(atual)); setPendente(null); }, [atual]);
+
+  const salvar = async () => {
+    if (cancelado.current) { cancelado.current = false; return; }
+    const v = num(txt);
+    const novo = txt.trim() === "" ? null : isNaN(v) || v < 0 ? undefined : Math.round(v * 100) / 100;
+    if (novo === undefined) { toast(`Preço inválido em ${p.nome}. Use só números, por exemplo 5,99.`); setTxt(precoTxt(atual)); return; }
+    if (novo === atual) { setTxt(precoTxt(novo)); setPendente(null); return; }
+    if (novo != null && atual != null && atual > 0 && (novo / atual > 1.5 || novo / atual < 2 / 3)) { setPendente({ v: novo }); return; }
+    setPendente(null);
+    await onSalvar(novo);
+  };
+  const desfazer = () => { setTxt(precoTxt(atual)); setPendente(null); };
+
+  return (
+    <div className="preco-cel">
+      <span className="preco-linha">
+        <span className="hint">R$</span>
+        <input ref={campo} className="inp tnum preco-inp" id={`preco-${p.id}`} inputMode="decimal"
+          value={txt} placeholder="—" aria-label={`Preço de ${p.nome}`} aria-invalid={pendente ? true : undefined}
+          onChange={e => { setTxt(e.target.value); setPendente(null); }} onBlur={salvar}
+          onKeyDown={e => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            if (e.key === "Escape") { cancelado.current = true; desfazer(); (e.target as HTMLInputElement).blur(); }
+          }} />
+        <span className="hint">/{p.unidade}</span>
+      </span>
+      {pendente && (
+        <div className="confirma" role="alert">
+          <span>De <b className="tnum">{reais(atual)}</b> para <b className="tnum">{reais(pendente.v)}</b>?</span>
+          <button type="button" className="btn sm" onClick={() => { const v = pendente.v; setPendente(null); onSalvar(v); }}>Confirmar</button>
+          <button type="button" className="btn ghost sm" onClick={() => { setPendente(null); campo.current?.focus(); campo.current?.select(); }}>Corrigir</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LinhaProduto({ p, estado, mudar, onExcluir }: { p: Produto; estado?: Estado; mudar: Mudar; onExcluir: () => void }) {
+  const arquivo = useRef<HTMLInputElement>(null);
   const [enviando, setEnviando] = useState(false);
-  async function enviar(arquivo?: File) {
-    if (!arquivo) return;
+
+  async function enviarFoto(f?: File) {
+    if (!f) return;
     setEnviando(true);
     try {
-      const blob = await reduzir(arquivo);
+      const blob = await reduzir(f);
       const caminho = `${p.id}-${Date.now()}.jpg`;
       const { error } = await supabase.storage.from("produtos").upload(caminho, blob, { contentType: "image/jpeg", upsert: false });
       if (error) throw error;
       const antigo = caminhoNoStorage(p.imagem_url);
-      await onMudar(supabase.storage.from("produtos").getPublicUrl(caminho).data.publicUrl);
+      await mudar({ imagem_url: supabase.storage.from("produtos").getPublicUrl(caminho).data.publicUrl }, `${p.nome}: foto salva`);
       if (antigo) await supabase.storage.from("produtos").remove([antigo]);
     } catch (e) { toast(msgErro(e)); }
     finally { setEnviando(false); }
   }
-  async function remover() {
+  async function removerFoto() {
     const antigo = caminhoNoStorage(p.imagem_url);
-    await onMudar(null);
+    await mudar({ imagem_url: null }, `${p.nome}: foto removida`);
     if (antigo) await supabase.storage.from("produtos").remove([antigo]);
   }
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-      {p.imagem_url ? <img className="thumb" src={p.imagem_url} alt="" /> : <span className="thumb vazia">sem foto</span>}
-      <label className="btn ghost sm" style={{ cursor: "pointer" }}>
-        {enviando ? "Enviando…" : p.imagem_url ? "Trocar" : "Enviar"}
-        <input type="file" accept="image/*" hidden disabled={enviando} onChange={e => { enviar(e.target.files?.[0]); e.target.value = ""; }} />
-      </label>
-      {p.imagem_url && !enviando && <button className="x" onClick={remover} aria-label={`Remover foto de ${p.nome}`}>✕</button>}
-    </span>
-  );
-}
+  const escolherFoto = () => arquivo.current?.click();
 
-/** Campo de preço que salva ao sair do campo ou apertar Enter. */
-function CampoPreco({ p, onSalvar }: { p: Produto; onSalvar: (v: number | null) => Promise<void> }) {
-  const [txt, setTxt] = useState(precoTxt(p.preco));
-  useEffect(() => setTxt(precoTxt(p.preco)), [p.preco]);
-  const salvar = async () => {
-    const v = num(txt);
-    const novo = txt.trim() === "" ? null : isNaN(v) || v < 0 ? undefined : Math.round(v * 100) / 100;
-    if (novo === undefined) { toast("Preço inválido"); setTxt(precoTxt(p.preco)); return; }
-    if (novo === (p.preco == null ? null : Number(p.preco))) { setTxt(precoTxt(novo)); return; }
-    await onSalvar(novo);
-  };
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-      <span className="hint">R$</span>
-      <input className="inp tnum" style={{ width: 88, textAlign: "right", padding: "6px 8px" }} id={`preco-${p.id}`} inputMode="decimal"
-        value={txt} placeholder="—" aria-label={`Preço de ${p.nome}`}
-        onChange={e => setTxt(e.target.value)} onBlur={salvar} onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()} />
-      <span className="hint">/{p.unidade}</span>
-    </span>
+    <tr className={p.ativo ? undefined : "fora"}>
+      <td className="c-nome">
+        <div className="prod-cel">
+          <button type="button" className={`thumb-btn${p.imagem_url ? " tem" : ""}`} onClick={escolherFoto} disabled={enviando} aria-busy={enviando || undefined}
+            aria-label={`${p.imagem_url ? "Trocar" : "Enviar"} foto de ${p.nome}`} title={p.imagem_url ? "Trocar foto" : "Enviar foto"}>
+            {p.imagem_url ? <img src={p.imagem_url} alt="" /> : <Icone nome="camera" />}
+          </button>
+          <input ref={arquivo} type="file" accept="image/*" hidden onChange={e => { enviarFoto(e.target.files?.[0]); e.target.value = ""; }} />
+          <div className="nome-bloco">
+            <b className="nome-txt">{p.nome}</b>
+            <div className="meta-linha">
+              <span className="cat-m">{p.categoria}</span>
+              {p.preco_em && <span>preço de {dataCurta(p.preco_em)}</span>}
+              {enviando && <span className="estado">Enviando foto…</span>}
+              {estado === "salvando" && <span className="estado">Salvando…</span>}
+              {estado === "salvo" && <span className="estado salvo"><Icone nome="ok" tam={14} />Salvo</span>}
+              {estado === "erro" && <span className="estado erro">Não salvou</span>}
+            </div>
+          </div>
+        </div>
+      </td>
+      <td className="c-preco">
+        <CampoPreco p={p} onSalvar={v => mudar({ preco: v }, `${p.nome}: ${reais(p.preco == null ? null : Number(p.preco))} → ${reais(v)}`, true)} />
+      </td>
+      <td className="c-venda">
+        <label className="switch">
+          <input type="checkbox" role="switch" checked={p.ativo}
+            onChange={e => mudar({ ativo: e.target.checked }, e.target.checked ? `${p.nome} voltou à venda` : `${p.nome} marcado como Fora`, true)} />
+          <span className="trilho" aria-hidden="true" />
+          <span className="rot"><span className="sr">{p.nome}: </span>{p.ativo ? "À venda" : "Fora"}</span>
+        </label>
+      </td>
+      <td className="c-un">
+        <select className="unit" value={p.unidade} aria-label={`Unidade de ${p.nome}`}
+          onChange={e => { const u = e.target.value as Unidade; mudar({ unidade: u }, `${p.nome} agora é vendido por ${u}; o preço vale por ${u}`, true); }}>
+          {UNIDADES.map(u => <option key={u}>{u}</option>)}
+        </select>
+      </td>
+      <td className="c-porun">
+        {p.unidade === "kg" ? (
+          <label className="pilula" title="O cliente pode pedir em unidades; o peso é conferido na separação">
+            <input type="checkbox" checked={p.aceita_unidade}
+              onChange={e => mudar({ aceita_unidade: e.target.checked }, e.target.checked ? `${p.nome}: aceita pedido por unidade` : `${p.nome}: só por kg`, true)} />
+            <span className="marca" aria-hidden="true"><Icone nome="ok" tam={12} /></span>
+            <span><span className="sr">{p.nome}: </span><span className="txt-longo">Também </span>por un</span>
+          </label>
+        ) : <span className="hint" aria-label="Não se aplica">—</span>}
+      </td>
+      <td className="c-cat">{p.categoria}</td>
+      <td className="c-menu">
+        <MenuLinha nome={p.nome} itens={[
+          { rotulo: p.imagem_url ? "Trocar foto" : "Enviar foto", fn: escolherFoto },
+          ...(p.imagem_url ? [{ rotulo: "Remover foto", fn: removerFoto }] : []),
+          { rotulo: "Excluir produto…", fn: onExcluir, perigo: true },
+        ]} />
+      </td>
+    </tr>
   );
 }
 
@@ -80,6 +192,8 @@ export default function Produtos() {
   const [novo, setNovo] = useState({ nome: "", categoria: "Frutas", unidade: "kg" as Unidade, preco: "" });
   const [erroNovo, setErroNovo] = useState("");
   const [excluindo, setExcluindo] = useState<Produto | null>(null);
+  const [estados, setEstados] = useState<Record<number, Estado>>({});
+  const timers = useRef<Record<number, number>>({});
 
   const carregar = useCallback(async () => {
     const { data, error } = await supabase.from("produtos").select("*").order("categoria").order("ordem").order("nome");
@@ -87,6 +201,7 @@ export default function Produtos() {
     setLista((data as Produto[]) ?? []);
   }, []);
   useEffect(() => { carregar(); }, [carregar]);
+  useEffect(() => () => Object.values(timers.current).forEach(clearTimeout), []);
   const categorias = useMemo(() => [...new Set((lista ?? []).map(p => p.categoria))].sort((a, b) => a.localeCompare(b, "pt-BR")), [lista]);
   const filtrados = useMemo(() => (lista ?? []).filter(p => (!busca || slug(p.nome + " " + p.categoria).includes(slug(busca))) && (!soSemPreco || (p.ativo && p.preco == null))), [lista, busca, soSemPreco]);
   const { ordenados: vis, ord, alternar } = useOrdenacao(filtrados, {
@@ -98,10 +213,20 @@ export default function Produtos() {
 
   const semPreco = lista.filter(p => p.ativo && p.preco == null).length;
 
-  async function muda(p: Produto, patch: Partial<Produto>, aviso?: string) {
+  function marcar(id: number, e?: Estado) {
+    clearTimeout(timers.current[id]);
+    setEstados(s => { const n = { ...s }; if (e) n[id] = e; else delete n[id]; return n; });
+    if (e === "salvo") timers.current[id] = window.setTimeout(() => marcar(id), 2500);
+  }
+  /** Salva a mudança na hora (o catálogo do cliente já vê) e, se `desfazivel`, oferece Desfazer no aviso. */
+  async function muda(p: Produto, patch: Partial<Produto>, aviso?: string, desfazivel?: boolean) {
+    const antes = Object.fromEntries(Object.keys(patch).map(k => [k, p[k as keyof Produto]])) as Partial<Produto>;
+    marcar(p.id, "salvando");
     setLista(l => l!.map(x => (x.id === p.id ? { ...x, ...patch } : x)));
     const { error } = await supabase.from("produtos").update(patch).eq("id", p.id);
-    if (error) { toast(msgErro(error)); carregar(); } else if (aviso) toast(aviso);
+    if (error) { marcar(p.id, "erro"); toast(`${p.nome}: não foi possível salvar. ${msgErro(error)}`); carregar(); return; }
+    marcar(p.id, "salvo");
+    if (aviso) toast(aviso, desfazivel ? { rotulo: "Desfazer", fn: () => { muda({ ...p, ...patch }, antes, `${p.nome}: desfeito`); } } : undefined);
   }
   async function adicionar() {
     const nome = novo.nome.trim();
@@ -142,29 +267,25 @@ export default function Produtos() {
         </div>
         {semPreco > 0 && <button className="chip" aria-pressed={soSemPreco} onClick={() => setSoSemPreco(v => !v)}>Sem preço · {semPreco}</button>}
       </div>
-      <div className="card" style={{ padding: 0 }}><div className="tablewrap" style={{ margin: 0 }}><table className="t" style={{ minWidth: 960 }}>
+      <div className="card" style={{ padding: 0 }}><table className="t prods">
         <thead><tr>
-          <Th chave="foto" ord={ord} alternar={alternar} style={{ paddingLeft: 16 }}>Foto</Th>
-          <Th chave="nome" ord={ord} alternar={alternar}>Produto</Th>
-          <Th chave="categoria" ord={ord} alternar={alternar}>Categoria</Th>
-          <Th chave="unidade" ord={ord} alternar={alternar}>Unidade</Th>
+          <Th chave="nome" ord={ord} alternar={alternar} style={{ paddingLeft: 16 }}>Produto</Th>
           <Th chave="preco" ord={ord} alternar={alternar}>Preço</Th>
-          <th>Também por unidade</th>
-          <Th chave="ativo" ord={ord} alternar={alternar}>À venda</Th><th /></tr></thead>
+          <Th chave="ativo" ord={ord} alternar={alternar}>À venda</Th>
+          <Th chave="unidade" ord={ord} alternar={alternar}>Unidade</Th>
+          <th title="Produtos por kg que o cliente também pode pedir em unidades">Por unidade</th>
+          <Th chave="categoria" ord={ord} alternar={alternar} classe="c-cat">Categoria</Th>
+          <th><span className="sr">Mais opções</span></th>
+        </tr></thead>
         <tbody>{vis.map(p => (
-          <tr key={p.id} style={p.ativo ? undefined : { opacity: .55 }}>
-            <td style={{ paddingLeft: 16 }}><FotoProduto p={p} onMudar={url => muda(p, { imagem_url: url }, url ? "Foto salva" : "Foto removida")} /></td>
-            <td><b>{p.nome}</b>{p.preco_em && <div className="hint">preço de {dataCurta(p.preco_em)}</div>}</td>
-            <td>{p.categoria}</td>
-            <td><select className="unit" value={p.unidade} onChange={e => muda(p, { unidade: e.target.value as Unidade })} aria-label="Unidade">{UNIDADES.map(u => <option key={u}>{u}</option>)}</select></td>
-            <td><CampoPreco p={p} onSalvar={v => muda(p, { preco: v }, v == null ? `${p.nome}: sem preço` : `${p.nome}: preço salvo`)} /></td>
-            <td>{p.unidade === "kg" ? <input type="checkbox" checked={p.aceita_unidade} onChange={e => muda(p, { aceita_unidade: e.target.checked })} aria-label="Aceita pedido por unidade" /> : <span className="hint">—</span>}</td>
-            <td><label className="check"><input type="checkbox" checked={p.ativo} onChange={e => muda(p, { ativo: e.target.checked })} /> {p.ativo ? "Sim" : "Fora"}</label></td>
-            <td style={{ textAlign: "right", paddingRight: 12 }}><button className="btn ghost sm perigo" onClick={() => setExcluindo(p)}>Excluir</button></td>
-          </tr>))}</tbody>
-      </table></div></div>
+          <LinhaProduto key={p.id} p={p} estado={estados[p.id]}
+            mudar={(patch, aviso, desfazivel) => muda(p, patch, aviso, desfazivel)} onExcluir={() => setExcluindo(p)} />
+        ))}</tbody>
+      </table>
+      {vis.length === 0 && <p className="empty" style={{ margin: 0 }}>{lista.length ? "Nenhum produto encontrado." : "Nenhum produto cadastrado ainda."}</p>}
+      </div>
       {excluindo && <ExcluirProduto p={excluindo} onClose={() => setExcluindo(null)}
-        onFora={async () => { await muda(excluindo, { ativo: false }, `${excluindo.nome} marcado como Fora`); setExcluindo(null); }}
+        onFora={async () => { await muda(excluindo, { ativo: false }, `${excluindo.nome} marcado como Fora`, true); setExcluindo(null); }}
         onExcluido={() => { setExcluindo(null); carregar(); }} />}
       <p className="hint">O preço aparece no catálogo do cliente e já entra no pedido. Pedidos feitos antes de uma mudança de preço continuam com o valor da época. Produto sem preço aparece como “preço a confirmar”. Itens por quilo pedidos por unidade também ficam a confirmar.</p>
     </>

@@ -41,13 +41,13 @@ export function useOrdenacao<T>(itens: T[], colunas: Record<string, (x: T) => Va
 }
 
 /** Título de coluna clicável. `padrao` = direção do 1º clique (números costumam começar do maior). */
-export function Th({ chave, ord, alternar, children, direita, padrao = "asc", style }: {
+export function Th({ chave, ord, alternar, children, direita, padrao = "asc", style, classe }: {
   chave: string; ord: Ordem; alternar: (c: string, d?: Direcao) => void; children: ReactNode;
-  direita?: boolean; padrao?: Direcao; style?: React.CSSProperties;
+  direita?: boolean; padrao?: Direcao; style?: React.CSSProperties; classe?: string;
 }) {
   const ativo = ord.chave === chave;
   return (
-    <th className={direita ? "r" : undefined} style={style} aria-sort={ativo ? (ord.dir === "asc" ? "ascending" : "descending") : "none"}>
+    <th className={[direita ? "r" : "", classe ?? ""].join(" ").trim() || undefined} style={style} aria-sort={ativo ? (ord.dir === "asc" ? "ascending" : "descending") : "none"}>
       <button type="button" className={`th-ord ${ativo ? "on" : ""}`} onClick={() => alternar(chave, padrao)} title="Ordenar">
         {children}<span className="seta" aria-hidden="true">{ativo ? (ord.dir === "asc" ? "▲" : "▼") : "↕"}</span>
       </button>
